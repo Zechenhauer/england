@@ -592,7 +592,6 @@
             });
         }
 
-        // GENIALE LÖSUNG: Zählt alle Tore direkt aus den bereits geladenen Spieltagen im Speicher!
         function openScorersModal() {
             let tbody = document.getElementById('scorersModalBody');
             tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Berechne Torschützen aus den Spieltagen...</td></tr>`;
@@ -600,17 +599,13 @@
 
             let aggregatedScorers = {};
 
-            // Durchlaufe alle Spieltage, die bisher in leagueMatches geladen wurden
             Object.keys(leagueMatches).forEach(mw => {
                 let matches = leagueMatches[mw];
                 matches.forEach(m => {
-                    // Hilfsfunktion zum Verarbeiten der Tor-Strings (z.B. "⚽ Haaland (23')")
                     let processGoalsList = (goalsArray, teamName, teamLogo) => {
                         if (!goalsArray || !Array.isArray(goalsArray)) return;
                         goalsArray.forEach(gStr => {
-                            // Entferne das ⚽ Emoji und eventuelle Minuten/Notizen wie "(23')" oder "(Pen)"
                             let cleanStr = gStr.replace('⚽', '').trim();
-                            // Trenne den Spielernamen von der Spielminute in Klammern
                             let playerName = cleanStr.split('(')[0].trim();
                             
                             if (playerName && playerName.toLowerCase() !== 'tor') {
