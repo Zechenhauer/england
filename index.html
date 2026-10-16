@@ -334,7 +334,6 @@
     <!-- JAVASCRIPT LOGIK -->
     <script>
         let leagueMatches = {};
-        let allSeasonScorers = {};
         let currentMatchday = 7;
         let autoRefreshTimer = null;
 
@@ -429,21 +428,21 @@
                                     let cleanText = detail.text.replace(/scored.*\$/, '').trim();
                                     if (cleanText && cleanText.toLowerCase() !== 'goal') playerName = cleanText;
                                 }
-                                if (!playerName) playerName = detail.team?.displayName || "Tor";
+                                if (!playerName) playerName = detail.team?.displayName || "";
 
-                                let clock = detail.clock?.displayValue || "";
-                                let notes = "";
-                                if (detail.penalty) notes = " (Pen)";
-                                if (detail.ownGoal) notes = " (ET)";
+                                if (playerName) {
+                                    let clock = detail.clock?.displayValue || "";
+                                    let notes = "";
+                                    if (detail.penalty) notes = " (Pen)";
+                                    if (detail.ownGoal) notes = " (ET)";
 
-                                let goalEntry = clock ? `${playerName} (${clock}')` + notes : playerName;
+                                    let goalEntry = clock ? `${playerName} (${clock}')` + notes : playerName;
 
-                                if (detail.team?.id === homeComp.team.id) {
-                                    goalsHome.push(`⚽ ${goalEntry}`);
-                                    addScorerToGlobal(playerName, homeComp.team.displayName, homeComp.team.logo);
-                                } else if (detail.team?.id === awayComp.team.id) {
-                                    goalsAway.push(`⚽ ${goalEntry}`);
-                                    addScorerToGlobal(playerName, awayComp.team.displayName, awayComp.team.logo);
+                                    if (detail.team?.id === homeComp.team.id) {
+                                        goalsHome.push(`⚽ ${goalEntry}`);
+                                    } else if (detail.team?.id === awayComp.team.id) {
+                                        goalsAway.push(`⚽ ${goalEntry}`);
+                                    }
                                 }
                             }
                         });
@@ -483,72 +482,6 @@
             }
 
             renderMatchdayTable();
-            loadFullSeasonScorersInBackground();
-        }
-
-        // Hilfsfunktion zum sicheren Sammeln der Torschützen
-        function addScorerToGlobal(playerName, teamName, teamLogo) {
-            if (!playerName || playerName.toLowerCase() === 'tor') return;
-            if (!allSeasonScorers[playerName]) {
-                allSeasonScorers[playerName] = { count: 0, team: teamName, logo: teamLogo || '' };
-            }
-            allSeasonScorers[playerName].count++;
-        }
-
-        // Robuste Hintergrund-Abfrage aller gespielten Spieltage für die Gesamtwertung
-        async function loadFullSeasonScorersInBackground() {
-            for (let s = 1; s <= currentMatchday; s++) {
-                let baseStr = MATCHWEEK_START_DATES[s];
-                if (!baseStr) continue;
-                let dObj = parseEspnDate(baseStr);
-                
-                for (let i = 0; i < 7; i++) {
-                    let d = new Date(dObj);
-                    d.setDate(dObj.getDate() + i);
-                    let dateStr = formatDateKey(d);
-                    
-                    try {
-                        let res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=${dateStr}`);
-                        let data = await res.json();
-                        let events = data.events || [];
-                        
-                        events.forEach(ev => {
-                            let comp = ev.competitions?.[0];
-                            if (!comp || !comp.details) return;
-                            let homeComp = comp.competitors.find(c => c.homeAway === 'home');
-                            let awayComp = comp.competitors.find(c => c.homeAway === 'away');
-                            
-                            comp.details.forEach(detail => {
-                                if (detail.type?.text === "Goal" || detail.scoringPlay || detail.goalValue > 0) {
-                                    let playerName = detail.scorer?.athlete?.displayName 
-                                        || detail.athlete?.displayName 
-                                        || (detail.athletesInvolved && detail.athletesInvolved[0]?.displayName)
-                                        || "";
-                                    if (!playerName && detail.text) {
-                                        let cleanText = detail.text.replace(/scored.*\$/, '').trim();
-                                        if (cleanText && cleanText.toLowerCase() !== 'goal') playerName = cleanText;
-                                    }
-                                    if (!playerName) return;
-
-                                    let teamName = "";
-                                    let teamLogo = "";
-                                    if (homeComp && detail.team?.id === homeComp.team.id) {
-                                        teamName = homeComp.team.displayName;
-                                        teamLogo = homeComp.team.logo;
-                                    } else if (awayComp && detail.team?.id === awayComp.team.id) {
-                                        teamName = awayComp.team.displayName;
-                                        teamLogo = awayComp.team.logo;
-                                    }
-
-                                    if (teamName) {
-                                        addScorerToGlobal(playerName, teamName, teamLogo);
-                                    }
-                                }
-                            });
-                        });
-                    } catch (err) {}
-                }
-            }
         }
 
         function getTeamHtml(teamName, logoUrl, alignRight = false, goals = []) {
@@ -659,21 +592,51 @@
             });
         }
 
+        // GENIALE LÖSUNG: Zählt alle Tore direkt aus den bereits geladenen Spieltagen im Speicher!
         function openScorersModal() {
             let tbody = document.getElementById('scorersModalBody');
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade Torschützenliste...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Berechne Torschützen aus den Spieltagen...</td></tr>`;
             document.getElementById('scorersModal').style.display = 'flex';
 
-            let scorersArray = Object.keys(allSeasonScorers).map(name => ({
+            let aggregatedScorers = {};
+
+            // Durchlaufe alle Spieltage, die bisher in leagueMatches geladen wurden
+            Object.keys(leagueMatches).forEach(mw => {
+                let matches = leagueMatches[mw];
+                matches.forEach(m => {
+                    // Hilfsfunktion zum Verarbeiten der Tor-Strings (z.B. "⚽ Haaland (23')")
+                    let processGoalsList = (goalsArray, teamName, teamLogo) => {
+                        if (!goalsArray || !Array.isArray(goalsArray)) return;
+                        goalsArray.forEach(gStr => {
+                            // Entferne das ⚽ Emoji und eventuelle Minuten/Notizen wie "(23')" oder "(Pen)"
+                            let cleanStr = gStr.replace('⚽', '').trim();
+                            // Trenne den Spielernamen von der Spielminute in Klammern
+                            let playerName = cleanStr.split('(')[0].trim();
+                            
+                            if (playerName && playerName.toLowerCase() !== 'tor') {
+                                if (!aggregatedScorers[playerName]) {
+                                    aggregatedScorers[playerName] = { count: 0, team: teamName, logo: teamLogo };
+                                }
+                                aggregatedScorers[playerName].count++;
+                            }
+                        });
+                    };
+
+                    processGoalsList(m.goalsHome, m.home, m.homeLogo);
+                    processGoalsList(m.goalsAway, m.away, m.awayLogo);
+                });
+            });
+
+            let scorersArray = Object.keys(aggregatedScorers).map(name => ({
                 name: name,
-                goals: allSeasonScorers[name].count,
-                team: allSeasonScorers[name].team,
-                logo: allSeasonScorers[name].logo
+                goals: aggregatedScorers[name].count,
+                team: aggregatedScorers[name].team,
+                logo: aggregatedScorers[name].logo
             }));
 
             tbody.innerHTML = '';
             if (scorersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in dieser Saison erfasst.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in den geladenen Spieltagen erfasst.<br><span style="font-size:0.8rem;">(Tipp: Klicke dich kurz durch die gespielten Spieltage, damit deren Tore geladen werden.)</span></td></tr>`;
             } else {
                 scorersArray.sort((a, b) => b.goals - a.goals);
                 scorersArray.forEach((s, idx) => {
