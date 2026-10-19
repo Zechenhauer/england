@@ -3,35 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premier League — England</title>
+    <title>FC Liverpool — Premier League</title>
     
-    <!-- Perfektes Inline-SVG Icon für den Homescreen -->
+    <!-- Perfektes Inline-SVG Icon im Liverpool-Rot -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23c8102e%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>⚽</text></svg>">
     <link rel="apple-touch-icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23c8102e%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>⚽</text></svg>">
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase Client Bibliothek laden -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --bg-color: #0c0a09;
-            --card-bg: #17171a;
-            --text-color: #f1f5f9;
-            --text-muted: #94a3b8;
-            --border-color: #26262b;
-            --eng-red: #c8102e;
-            --eng-accent: #ef4444;
+            --bg-color: #080709;
+            --card-bg: #121014;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #27232b;
+            --lfc-red: #c8102e;
+            --lfc-hover: #a50d24;
+            --lfc-dark: #800a1d;
+            --lfc-gold: #f6eb61;
+            --lfc-bright-red: #ef4444;
         }
 
+        * { box-sizing: border-box; }
         body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
         }
 
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: var(--bg-color); border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            border: 1px solid rgba(200, 16, 46, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(200, 16, 46, 0.2);
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        .header-logo {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            object-fit: contain;
+            border: 2px solid var(--lfc-red);
+            background: #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            padding: 2px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0;
+            color: #ffffff;
+            font-size: 1.6rem;
+            font-weight: 800;
+        }
+        h2 span { color: var(--lfc-gold); }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .meta-info {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .supabase-badge {
+            color: #3fb950;
+            background: rgba(46, 160, 67, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(46, 160, 67, 0.3);
+            font-weight: 600;
+        }
 
         @keyframes pulse-red {
             0%, 100% { opacity: 1; }
@@ -45,123 +117,145 @@
             animation: pulse-red 1.2s infinite;
             display: inline-block;
         }
+        .live-badge {
+            display: none;
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.15);
+            padding: 3px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(248, 113, 113, 0.4);
+            font-weight: bold;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
 
         .section-box {
-            background: var(--card-bg);
+            background: #080709;
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
 
         .section-header {
-            background-color: var(--eng-red);
+            background: linear-gradient(90deg, var(--lfc-red) 0%, var(--lfc-dark) 100%);
             color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-left: 5px solid #ffffff;
-            padding: 12px 18px;
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
             font-weight: bold;
+            text-align: center;
             text-transform: uppercase;
-            font-size: 0.95rem;
-            border-radius: 8px;
-            margin-bottom: 18px;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            margin-bottom: 15px;
             letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
-            box-shadow: 0 2px 8px rgba(200, 16, 46, 0.4);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .header-action-btn {
             background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: #ffffff;
-            padding: 5px 12px;
-            border-radius: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 0.75rem;
             font-weight: bold;
             transition: background 0.2s;
-            text-transform: uppercase;
         }
         .header-action-btn:hover { background: rgba(0, 0, 0, 0.5); }
 
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.9rem;
+        .dash-card {
+            background: #080709;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-
-        th {
-            background-color: #101012;
-            color: var(--text-muted);
-            padding: 12px 10px;
-            text-transform: uppercase;
+        .dash-card-title {
             font-size: 0.75rem;
+            font-weight: bold;
+            color: #ffffff;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
-            white-space: nowrap;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        td {
-            padding: 12px 10px;
-            vertical-align: middle;
-            border-bottom: 1px solid rgba(38, 38, 43, 0.5);
-        }
-
-        tr:hover { background-color: rgba(200, 16, 46, 0.05); }
-
-        tr.cl-zone td { background: rgba(200, 16, 46, 0.12); border-top: 1px solid rgba(200, 16, 46, 0.3); border-bottom: 1px solid rgba(200, 16, 46, 0.3); }
-        tr.el-zone td { background: rgba(51, 133, 255, 0.12); border-top: 1px solid rgba(51, 133, 255, 0.25); border-bottom: 1px solid rgba(51, 133, 255, 0.25); }
-        tr.relegation-zone td { background: rgba(180, 40, 40, 0.15); border-top: 1px solid rgba(180, 40, 40, 0.3); border-bottom: 1px solid rgba(180, 40, 40, 0.3); }
-
-        .team-mini-logo {
-            width: 24px;
-            height: 24px;
-            object-fit: contain;
-            flex-shrink: 0;
-        }
-
-        .team-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .matchday-controls {
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
-            font-size: 0.95rem;
         }
-
-        .matchday-btn {
-            background: #212127;
-            border: 1px solid var(--border-color);
+        .dash-card-content {
+            font-size: 0.9rem;
             color: var(--text-color);
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
+        }
+        .dash-btn-link {
+            background: var(--lfc-dark);
+            color: #ffffff;
+            border: 1px solid var(--lfc-red);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
             font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
             transition: background 0.2s;
         }
-        .matchday-btn:hover { background: var(--eng-red); color: #fff; border-color: var(--eng-red); }
+        .dash-btn-link:hover { background: var(--lfc-red); color: #fff; }
 
-        /* Modal Styles */
+        .legends-scroll-box {
+            max-height: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 4px;
+        }
+        .legends-scroll-box::-webkit-scrollbar { width: 6px; }
+        .legends-scroll-box::-webkit-scrollbar-track { background: #080709; border-radius: 3px; }
+        .legends-scroll-box::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        .legends-scroll-box::-webkit-scrollbar-thumb:hover { background: var(--lfc-red); }
+
+        .legend-row {
+            background: #17131a;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .legend-row:hover {
+            background: rgba(200, 16, 46, 0.2);
+            color: var(--lfc-gold);
+        }
+
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.8);
             backdrop-filter: blur(4px);
             display: none;
             justify-content: center;
@@ -171,11 +265,11 @@
         }
         .modal-card {
             background: var(--card-bg);
-            border: 2px solid var(--eng-red);
-            border-radius: 16px;
+            border: 2px solid var(--lfc-red);
+            border-radius: 12px;
             padding: 20px;
             width: 100%;
-            max-width: 650px;
+            max-width: 550px;
             max-height: 85vh;
             display: flex;
             flex-direction: column;
@@ -183,595 +277,1169 @@
         }
         .modal-body {
             overflow-y: auto;
-            max-height: 65vh;
+            max-height: 70vh;
             flex: 1;
-            padding-right: 4px;
         }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--lfc-red); border-radius: 3px; }
+
+        .matchday-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .matchday-btn {
+            background: #17131a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .matchday-btn:hover { background: var(--lfc-dark); border-color: var(--lfc-red); }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+        th {
+            background-color: var(--lfc-dark);
+            color: #ffffff;
+            padding: 10px 8px;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            border-bottom: 2px solid var(--lfc-red);
+        }
+        td {
+            padding: 10px 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tr:hover { background-color: rgba(200, 16, 46, 0.08); }
+
+        tr.cl-zone td { background: rgba(200, 16, 46, 0.12); }
+        tr.el-zone td { background: rgba(51, 133, 255, 0.12); }
+        tr.relegation-zone td { background: rgba(180, 40, 40, 0.15); }
+        tr.lfc-team-row td {
+            font-weight: bold;
+            color: var(--lfc-gold);
+            background: rgba(200, 16, 46, 0.25) !important;
+        }
+        tr.lfc-match-row td {
+            background: rgba(200, 16, 46, 0.15) !important;
+            border-top: 1px solid rgba(200, 16, 46, 0.3);
+            border-bottom: 1px solid rgba(200, 16, 46, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .stat-card {
+            background: #080709;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--lfc-gold);
+            margin-top: 4px;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .team-mini-logo {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .team-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #fff;
+        }
+        .form-win { background-color: #238636; }
+        .form-draw { background-color: #6e7681; }
+        .form-loss { background-color: #da3633; }
+
+        .admin-toggle-wrapper {
+            text-align: right;
+            margin-top: 15px;
+        }
+        .admin-toggle-btn {
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .admin-toggle-btn:hover {
+            color: var(--lfc-gold);
+            border-color: var(--lfc-red);
+        }
+
+        .admin-card {
+            background: #080709;
+            border: 1px solid var(--lfc-red);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        .btn {
+            background: var(--lfc-red);
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: var(--lfc-hover); }
         .btn-danger {
             background: transparent;
             border: none;
             color: #f85149;
             cursor: pointer;
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
-        .btn-modal-close {
-            background: var(--eng-red);
-            color: #ffffff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            width: 100%;
+
+        .visitor-counter {
             margin-top: 15px;
-            transition: background 0.2s;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
         }
-        .btn-modal-close:hover { background: #a50d24; }
+        .visitor-counter strong { color: #ffffff; }
     </style>
 </head>
-<body class="p-4 md:p-6 min-h-screen flex justify-center">
+<body>
 
-    <div class="w-full max-w-[1200px]">
-        
-        <!-- HEADER -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-neutral-800 pb-4 mb-6 gap-4">
-            <div>
-                <h1 class="text-2xl font-black tracking-wide flex items-center gap-2 text-white">
-                    🏴󠁧󠁢󠁥󠁮󠁧󠁿 PREMIER LEAGUE <span style="color: var(--eng-accent);">ENGLAND</span>
-                </h1>
-                <p class="text-slate-400 text-xs mt-1">Saison 2026/27 • Live-Ergebnisse & Tabelle via ESPN API</p>
+<div class="container">
+    <div class="title-row">
+        <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg" alt="LFC Logo" class="header-logo">
+        <h2>FC <span>Liverpool</span></h2>
+        <img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg" alt="LFC Logo" class="header-logo">
+    </div>
+    <div class="subtitle">Premier League — Saison 2026/27 (Live-Sync via ESPN)</div>
+    <div class="meta-info">
+        <span>⚡ Web-App & Management: Jürgen Schützendorf</span>
+        <span class="supabase-badge" id="cloudStatusBadge">● ESPN Live-Ticker Aktiv</span>
+        <div class="live-badge" id="live-indicator"><span class="live-dot"></span> LIVE-SPIEL LÄUFT</div>
+    </div>
+
+    <!-- LIVERPOOL AUSWERTUNG -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>FC Liverpool — Saison-Auswertung</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="header-action-btn" style="background:var(--lfc-gold); color:#000; border:none;" onclick="openScorersModal()">⚽ Premier League Torschützen</button>
+                <button class="header-action-btn" onclick="openLFCMatchesModal()">📅 Alle LFC Spiele</button>
             </div>
-            
-            <div class="flex flex-wrap items-center gap-3">
-                <div id="live-indicator" class="hidden items-center gap-2 bg-red-950 border border-red-700 text-red-400 px-3 py-1.5 rounded-lg text-xs font-bold">
-                    <span class="live-dot"></span> LIVE SPIEL LÄUFT (Auto-Update 15s)
+        </div>
+        <div class="stats-grid" id="lfcStatsGrid"></div>
+        <div style="margin-top: 15px; background: #080709; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px;" id="formCurveWidgetBox">
+            <div style="font-size: 0.75rem; font-weight: bold; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Formverlauf (letzte Spiele):</div>
+            <div id="formCurveWidget" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">Noch keine beendeten Spiele</div>
+        </div>
+    </div>
+
+    <!-- 6ER KACHELN -->
+    <div class="dashboard-grid">
+        <div class="dash-card">
+            <div class="dash-card-title">⚽ Nächstes Spiel</div>
+            <div class="dash-card-content" id="nextMatchWidget">Lade nächstes Spiel...</div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-title">🏁 Letztes Pflichtspiel</div>
+            <div class="dash-card-content" id="lastMatchWidget">Wird geladen...</div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-title">⚽ Top 3 Torschützen (FC Liverpool)</div>
+            <div class="dash-card-content" id="topScorersWidget">Wird berechnet...</div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-title">🏟️ Heim vs. Auswärts</div>
+            <div class="dash-card-content" id="homeAwayWidget">Lade Bilanz...</div>
+        </div>
+        <div class="dash-card">
+            <div class="dash-card-title">⭐ Liverpool-Legenden (Anfield Wall of Fame)</div>
+            <div class="dash-card-content">
+                <div class="legends-scroll-box">
+                    <div class="legend-row" onclick="openLegendModal('Kenny Dalglish')"><span>Kenny Dalglish ("King Kenny")</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Steven Gerrard')"><span>Steven Gerrard</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Ian Rush')"><span>Ian Rush (Rekordschütze)</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Robbie Fowler')"><span>Robbie Fowler ("God")</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Jamie Carragher')"><span>Jamie Carragher</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Bill Shankly')"><span>Bill Shankly (Legenden-Manager)</span><span style="color:#ffffff">➔</span></div>
+                    <div class="legend-row" onclick="openLegendModal('Jürgen Klopp')"><span>Jürgen Klopp (Meister-Trainer)</span><span style="color:#ffffff">➔</span></div>
                 </div>
-                <button onclick="refreshAllData()" class="bg-[#c8102e] hover:bg-[#a50d24] text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5 border border-red-400/30">
-                    🔄 Aktualisieren
-                </button>
             </div>
         </div>
-
-        <!-- 1. SEKTION: SPIELTAGS-ERGEBNISSE & TORSCHÜTZEN -->
-        <div class="section-box">
-            <div class="section-header">
-                <span id="matchdayTableHeader">Spieltag 7 — Spiele & Ergebnisse</span>
-                <button class="header-action-btn" onclick="openScorersModal()">⚽ Torschützen</button>
-            </div>
-
-            <div class="matchday-controls">
-                <button class="matchday-btn" onclick="changeMatchday(-1)">◀ Vorheriger</button>
-                <strong id="matchdayDisplay" style="color: var(--eng-accent); font-size: 1.1rem;">Spieltag 7</strong>
-                <button class="matchday-btn" onclick="changeMatchday(1)">Nächster ▶</button>
-            </div>
-
-            <!-- Grid Layout für die Spiele im MSV / England Design -->
-            <div id="gamesGridContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="col-span-full text-center py-8 text-slate-400">Lade Spielplan von ESPN...</div>
+        <div class="dash-card">
+            <div class="dash-card-title"><span>📚 LFC-Historie</span> <span style="cursor:pointer; color:#ffffff" onclick="nextHistorieFakt()">Nächster Fakt</span></div>
+            <div class="dash-card-content" id="historieWidget" style="font-style: italic; margin-bottom: 12px;">"Der FC Liverpool wurde am 3. Juni 1892 gegründet."</div>
+            <div style="display: flex; gap: 8px;">
+                <a href="https://liverpoolfc.com" target="_blank" class="dash-btn-link">🌐 LFC.com</a>
+                <a href="https://store.liverpoolfc.com" target="_blank" class="dash-btn-link" style="background:#800a1d; color:#ffffff;">🛍️ Shop</a>
             </div>
         </div>
+    </div>
 
-        <!-- 2. SEKTION: TABELLE (GESAMT) UNTER DEN SPIELTAGEN -->
-        <div class="section-box">
-            <div class="section-header">
-                <span>Premier League — Tabelle (Gesamt)</span>
+    <!-- SPIELTAGS-TABELLE -->
+    <div class="section-box">
+        <div class="section-header">
+            <span id="matchdayTableHeader">Spieltag 7 — Spiele & Ergebnisse</span>
+            <div class="header-actions">
+                <button class="header-action-btn" onclick="requestPushPermission()">🔔 Push-Alarm</button>
+                <button class="header-action-btn" onclick="refreshAllData()">🔄 Aktualisieren</button>
             </div>
-            
-            <div class="table-container custom-scroll">
+        </div>
+        <div class="matchday-controls">
+            <button class="matchday-btn" onclick="changeMatchday(-1)">◀ Vorheriger</button>
+            <strong id="matchdayDisplay" style="color: var(--lfc-gold); font-size: 1.1rem;">Spieltag 7</strong>
+            <button class="matchday-btn" onclick="changeMatchday(1)">Nächster ▶</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 120px; color: #ffffff;">Termin</th>
+                        <th style="text-align: right;">Heimmannschaft</th>
+                        <th style="text-align: center; width: 140px;">Ergebnis / Status</th>
+                        <th>Gastmannschaft</th>
+                    </tr>
+                </thead>
+                <tbody id="matchdayTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade Spielplan von ESPN...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- GESAMT-TABELLE -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>Premier League — Tabelle (Gesamt)</span>
+            <div class="header-actions">
+                <button class="header-action-btn" onclick="requestPushPermission()">🔔 Push-Alarm</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 35px;">Pl.</th>
+                        <th>Mannschaft</th>
+                        <th style="text-align: center;">Sp</th>
+                        <th style="text-align: center;">S</th>
+                        <th style="text-align: center;">U</th>
+                        <th style="text-align: center;">N</th>
+                        <th style="text-align: center;">Tore</th>
+                        <th style="text-align: center;">Diff</th>
+                        <th style="text-align: center;">Punkte</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Lade Tabelle...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="display: flex; gap: 15px; margin-top: 10px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: rgba(200, 16, 46, 0.4); border-radius: 2px; display: inline-block;"></span> Champions League (1. - 4.)</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: rgba(51, 133, 255, 0.4); border-radius: 2px; display: inline-block;"></span> Europa League (5.)</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: rgba(180, 40, 40, 0.5); border-radius: 2px; display: inline-block;"></span> Abstieg (18. - 20.)</div>
+        </div>
+
+        <div class="visitor-counter">
+            👁️ App-Besucher insgesamt: <strong id="visitorCountDisplay">35</strong>
+        </div>
+    </div>
+
+    <!-- ADMIN BEREICH -->
+    <div class="admin-card" id="adminCard">
+        <div style="font-weight: bold; color: var(--lfc-gold); margin-bottom: 12px; text-transform: uppercase; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>🔧 Push-Benachrichtigung testen</span>
+            <span style="font-size: 0.7rem; color: #3fb950;">● Admin-Modus Aktiv</span>
+        </div>
+        <button class="btn" style="background: #238636;" onclick="sendTestPush()">🚀 Test-Push Benachrichtigung senden</button>
+    </div>
+
+    <div class="admin-toggle-wrapper">
+        <button class="admin-toggle-btn" onclick="toggleAdminMode()">⚙️ Admin-Zugang</button>
+    </div>
+</div>
+
+<!-- POPUP MODALE -->
+<div class="modal-overlay" id="scorersModal">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <div style="font-weight: bold; font-size: 1.1rem; color: #ffffff;" id="scorersModalTitle">⚽ Torschützenliste — Premier League</div>
+            <button class="btn-danger" onclick="closeScorersModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 40px;">Pl.</th>
-                            <th>Mannschaft</th>
-                            <th style="text-align: center;">Sp</th>
-                            <th style="text-align: center;">S</th>
-                            <th style="text-align: center;">U</th>
-                            <th style="text-align: center;">N</th>
-                            <th style="text-align: center;">Tore</th>
-                            <th style="text-align: center;">Diff</th>
-                            <th style="text-align: center;">Punkte</th>
+                            <th style="width: 40px; text-align: center;">Pl.</th>
+                            <th>Spieler & Verein</th>
+                            <th style="text-align: center; width: 70px;">Tore</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Lade Tabelle...</td></tr>
+                    <tbody id="scorersModalBody">
+                        <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade Torschützen...</td></tr>
                     </tbody>
                 </table>
             </div>
+        </div>
+        <button class="btn" style="margin-top: 15px;" onclick="closeScorersModal()">Schließen</button>
+    </div>
+</div>
 
-            <div style="display: flex; gap: 15px; margin-top: 12px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: rgba(200, 16, 46, 0.6); border-radius: 2px;"></span> Champions League (1. - 4.)</div>
-                <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: rgba(51, 133, 255, 0.5); border-radius: 2px;"></span> Europa League (5.)</div>
-                <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: rgba(180, 40, 40, 0.6); border-radius: 2px;"></span> Abstieg (18. - 20.)</div>
+<div class="modal-overlay" id="lfcMatchesModal">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <div style="font-weight: bold; font-size: 1.1rem; color: #ffffff;">📅 FC Liverpool — Alle Saisonspiele</div>
+            <button class="btn-danger" onclick="closeLFCMatchesModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;">ST</th>
+                            <th style="width: 90px;">Termin</th>
+                            <th style="text-align: right;">Heim</th>
+                            <th style="text-align: center; width: 70px;">Erg.</th>
+                            <th>Gast</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lfcMatchesModalBody">
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade Spiele...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
+        <button class="btn" style="margin-top: 15px;" onclick="closeLFCMatchesModal()">Schließen</button>
     </div>
+</div>
 
-    <!-- TORSCHÜTZEN MODAL -->
-    <div class="modal-overlay" id="scorersModal">
-        <div class="modal-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                <div style="font-weight: bold; font-size: 1.1rem; color: #ffffff;" id="scorersModalTitle">⚽ Torschützenliste — Saisongesamtwertung</div>
-                <button class="btn-danger" onclick="closeScorersModal()">✕</button>
-            </div>
-            <div class="modal-body custom-scroll">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40px; text-align: center;">Pl.</th>
-                                <th>Spieler & Verein</th>
-                                <th style="text-align: center; width: 70px;">Tore</th>
-                            </tr>
-                        </thead>
-                        <tbody id="scorersModalBody">
-                            <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade gesamte Torschützenliste...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <button class="btn-modal-close" onclick="closeScorersModal()">Schließen</button>
+<div class="modal-overlay" id="legendModal">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <div style="font-weight: bold; font-size: 1.1rem; color: #ffffff;" id="legendModalTitle">Legende</div>
+            <button class="btn-danger" onclick="closeLegendModal()">✕</button>
         </div>
+        <div class="modal-body" id="legendModalText" style="font-size: 0.95rem; line-height: 1.6; color: var(--text-color);">
+            Lade Informationen...
+        </div>
+        <button class="btn" style="margin-top: 15px;" onclick="closeLegendModal()">Schließen</button>
     </div>
+</div>
 
-    <!-- JAVASCRIPT LOGIK -->
-    <script>
-        let leagueMatches = {};
-        let currentMatchday = 7;
-        let autoRefreshTimer = null;
+<script>
+    const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodXN5bHBqbnVqbHFvbW91Z21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMzA0ODIsImV4cCI6MjEwNDYwNjQ4Mn0.9ugazAA5pEdy9uSaJQWa5BMb7EwSH9d-h5K8ln_PF5A';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const MATCHWEEK_START_DATES = {
-            1: "20260821", 2: "20260828", 3: "20260904", 4: "20260911", 5: "20260918",
-            6: "20261009", 7: "20261016", 8: "20261023", 9: "20261030", 10: "20261106",
-            11: "20261113", 12: "20261120", 13: "20261127", 14: "20261204", 15: "20261211",
-            16: "20261218", 17: "20261226", 18: "20261229", 19: "20270102", 20: "20270115",
-            21: "20270122", 22: "20270129", 23: "20270205", 24: "20270212", 25: "20270219",
-            26: "20270226", 27: "20270305", 28: "20270312", 29: "20270319", 30: "20270402",
-            31: "20270409", 32: "20270416", 33: "20270423", 34: "20270430", 35: "20270507",
-            36: "20270512", 37: "20270516", 38: "20270524"
-        };
+    const ADMIN_PIN = "1892";
+    let isAdmin = false;
 
-        function parseEspnDate(dateStr) {
-            const y = parseInt(dateStr.substring(0, 4));
-            const m = parseInt(dateStr.substring(4, 6)) - 1;
-            const d = parseInt(dateStr.substring(6, 8));
-            return new Date(y, m, d);
+    let leagueMatches = {};
+    let currentMatchday = 7;
+    let autoRefreshTimer = null;
+
+    const MATCHWEEK_START_DATES = {
+        1: "20260821", 2: "20260828", 3: "20260904", 4: "20260911", 5: "20260918",
+        6: "20261009", 7: "20261016", 8: "20261023", 9: "20261030", 10: "20261106",
+        11: "20261113", 12: "20261120", 13: "20261127", 14: "20261204", 15: "20261211",
+        16: "20261218", 17: "20261226", 18: "20261229", 19: "20270102", 20: "20270115",
+        21: "20270122", 22: "20270129", 23: "20270205", 24: "20270212", 25: "20270219",
+        26: "20270226", 27: "20270305", 28: "20270312", 29: "20270319", 30: "20270402",
+        31: "20270409", 32: "20270416", 33: "20270423", 34: "20270430", 35: "20270507",
+        36: "20270512", 37: "20270516", 38: "20270524"
+    };
+
+    function initVisitorCounter() {
+        let count = parseInt(localStorage.getItem('lfc_app_visitors') || '35');
+        if (!sessionStorage.getItem('visited_lfc_session')) {
+            count++;
+            localStorage.setItem('lfc_app_visitors', count);
+            sessionStorage.setItem('visited_lfc_session', 'true');
+        }
+        document.getElementById('visitorCountDisplay').textContent = count.toLocaleString('de-DE');
+    }
+
+    const legendenInfos = {
+        "Kenny Dalglish": "Kenny Dalglish ('King Kenny') ist der vielleicht größte Spieler in der Geschichte des FC Liverpool. Er gewann als Spieler und Trainer zahlreiche Titel und verkörpert die Seele des Klubs.",
+        "Steven Gerrard": "Steven Gerrard führte den FC Liverpool als Kapitän zu unvergesslichen Triumphen, darunter das ‚Mirakel von Istanbul‘ in der Champions League 2005. Er ist eine absolute Liverpool-Ikone.",
+        "Ian Rush": "Ian Rush ist mit 346 Toren der Rekordschütze in der Geschichte des FC Liverpool und terrorisierte in den 1980er Jahren die englischen Abwehrreihen.",
+        "Robbie Fowler": "Robbie Fowler ('God') war einer der treffsichersten Stürmer, die Anfield je gesehen haben, und genoss absoluten Kultstatus bei den Fans.",
+        "Jamie Carragher": "Jamie Carragher absolvierte 737 Pflichtspiele für die Reds und stand wie kein anderer für kompromisslosen Einsatz und Vereinstreue.",
+        "Bill Shankly": "Bill Shankly verwandelte den FC Liverpool in den 1960er und 70er Jahren in eine europäische Spitzenmannschaft und prägte den berühmten Geist des Vereins.",
+        "Jürgen Klopp": "Jürgen Klopp führte den FC Liverpool zurück an die europäische Spitze, gewann die Champions League 2019 und nach 30 Jahren wieder die englische Meisterschaft."
+    };
+
+    function openLegendModal(name) {
+        document.getElementById('legendModalTitle').textContent = "⭐ " + name;
+        document.getElementById('legendModalText').textContent = legendenInfos[name] || "Informationen zu dieser Liverpool-Legende.";
+        document.getElementById('legendModal').style.display = 'flex';
+    }
+    function closeLegendModal() { document.getElementById('legendModal').style.display = 'none'; }
+
+    const historieFakten = [
+        "Der FC Liverpool wurde am 3. Juni 1892 gegründet.",
+        "Die berühmte Heimstätte des LFC ist das legendäre Anfield Stadium.",
+        "Die Vereinshymne 'You'll Never Walk Alone' wird vor jedem Heimspiel Gänsehaut-erregend gesungen.",
+        "Liverpool ist 19-facher Englischer Meister und mehrfacher Champions-League-Sieger."
+    ];
+    let historieIdx = 0;
+    function nextHistorieFakt() {
+        historieIdx = (historieIdx + 1) % historieFakten.length;
+        document.getElementById('historieWidget').textContent = `"${historieFakten[historieIdx]}"`;
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    async function requestPushPermission() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            alert("Push-Benachrichtigungen werden von diesem Browser leider nicht unterstützt.");
+            return;
+        }
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert("Die Berechtigung für Benachrichtigungen wurde verweigert.");
+                return;
+            }
+            const registration = await navigator.serviceWorker.register('./sw.js');
+            await registration.ready;
+
+            const publicVapidKey = 'BAsnfWgySLti5LzulXfN-xI-x7UDV32LO98YXgg1qdoRY1E1Tl05QPgCvOMgfwe80cSv_K7336-dhJTgBkHUI70';
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+            });
+
+            const p256dh = subscription.getKey('p256dh') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))) : '';
+            const auth = subscription.getKey('auth') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))) : '';
+
+            await supabaseClient.from('push_subscriptions_lfc').upsert({
+                endpoint: subscription.endpoint,
+                p256dh: p256dh,
+                auth: auth
+            }, { onConflict: 'endpoint' });
+
+            alert("Push-Alarm für den FC Liverpool erfolgreich aktiviert!");
+        } catch (error) {
+            console.error('Fehler bei der Push-Registrierung:', error);
+            alert("Fehler beim Aktivieren der Benachrichtigung: " + error.message);
+        }
+    }
+
+    async function sendTestPush() {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'push_subscriptions_lfc',
+                    title: "🔴 Liverpool Test-Tor-Alarm",
+                    body: "Das Test-Tor für den FC Liverpool wurde erfolgreich ausgelöst!"
+                })
+            });
+            if (response.ok) alert("Test-Push für Liverpool erfolgreich ausgelöst!");
+            else alert("Fehler von der Edge Function.");
+        } catch (e) {
+            alert("Netzwerkfehler: " + e.message);
+        }
+    }
+
+    function toggleAdminMode() {
+        const adminCard = document.getElementById('adminCard');
+        if (isAdmin) {
+            isAdmin = false;
+            adminCard.style.display = 'none';
+            return;
+        }
+        let enteredPin = prompt("Bitte Admin-PIN eingeben:");
+        if (enteredPin === ADMIN_PIN) {
+            isAdmin = true;
+            adminCard.style.display = 'block';
+            alert("Admin-Modus erfolgreich aktiviert!");
+        } else if (enteredPin !== null) {
+            alert("Falsche PIN!");
+        }
+    }
+
+    function parseEspnDate(dateStr) {
+        const y = parseInt(dateStr.substring(0, 4));
+        const m = parseInt(dateStr.substring(4, 6)) - 1;
+        const d = parseInt(dateStr.substring(6, 8));
+        return new Date(y, m, d);
+    }
+
+    function formatDateKey(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}${m}${d}`;
+    }
+
+    async function refreshAllData() {
+        await loadAllMatchdays();
+        await loadStandings();
+        await updateWidgetsWithAllMatchdays();
+    }
+
+    function changeMatchday(amount) {
+        currentMatchday = Math.max(1, Math.min(38, currentMatchday + amount));
+        renderAll();
+    }
+
+    async function loadAllMatchdays() {
+        const startBaseStr = MATCHWEEK_START_DATES[currentMatchday] || "20261016";
+        const startDateObj = parseEspnDate(startBaseStr);
+
+        const datesToFetch = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(startDateObj);
+            d.setDate(startDateObj.getDate() + i);
+            datesToFetch.push(formatDateKey(d));
         }
 
-        function formatDateKey(dateObj) {
-            const y = dateObj.getFullYear();
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            return `${y}${m}${d}`;
-        }
+        try {
+            const promises = datesToFetch.map(dateStr => 
+                fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=${dateStr}`)
+                    .then(res => res.json())
+                    .then(data => data.events || [])
+                    .catch(() => [])
+            );
 
-        async function refreshAllData() {
-            await loadAllMatchdays();
-            await loadStandings();
-        }
+            const results = await Promise.all(promises);
+            let events = results.flat();
 
-        function changeMatchday(amount) {
-            currentMatchday = Math.max(1, Math.min(38, currentMatchday + amount));
-            renderAll();
-        }
+            const eventMap = {};
+            events.forEach(e => { if (e && e.id) eventMap[e.id] = e; });
+            events = Object.values(eventMap);
 
-        async function loadAllMatchdays() {
-            const startBaseStr = MATCHWEEK_START_DATES[currentMatchday] || "20261016";
-            const startDateObj = parseEspnDate(startBaseStr);
+            leagueMatches[currentMatchday] = [];
+            let hasLive = false;
 
-            const datesToFetch = [];
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(startDateObj);
-                d.setDate(startDateObj.getDate() + i);
-                datesToFetch.push(formatDateKey(d));
+            events.forEach(ev => {
+                const comp = ev.competitions?.[0];
+                if (!comp) return;
+
+                const homeComp = comp.competitors.find(c => c.homeAway === 'home');
+                const awayComp = comp.competitors.find(c => c.homeAway === 'away');
+                if (!homeComp || !awayComp) return;
+
+                const statusType = ev.status.type.state;
+                const isLive = statusType === 'in';
+                if (isLive) hasLive = true;
+
+                let matchDateObj = new Date(ev.date);
+                let dateStr = !isNaN(matchDateObj.getTime()) ? matchDateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "";
+                let timeStr = !isNaN(matchDateObj.getTime()) ? matchDateObj.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : "15:00";
+
+                let goals = [];
+                let runningHome = 0;
+                let runningAway = 0;
+
+                if (comp.details && Array.isArray(comp.details)) {
+                    comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
+                    
+                    comp.details.forEach(detail => {
+                        if (detail.type?.text === "Goal" || detail.scoringPlay || detail.goalValue > 0) {
+                            let playerName = detail.scorer?.athlete?.displayName 
+                                || detail.athlete?.displayName 
+                                || (detail.athletesInvolved && detail.athletesInvolved[0]?.displayName)
+                                || "";
+
+                            if (!playerName && detail.text) {
+                                let cleanText = detail.text.replace(/scored.*\$/, '').trim();
+                                if (cleanText && cleanText.toLowerCase() !== 'goal') playerName = cleanText;
+                            }
+
+                            const scoringTeamId = detail.team?.id;
+                            const isHomeGoal = (scoringTeamId === homeComp.team.id);
+                            const isAwayGoal = (scoringTeamId === awayComp.team.id);
+
+                            if (isHomeGoal) runningHome++;
+                            if (isAwayGoal) runningAway++;
+
+                            if (!playerName) playerName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
+
+                            let clock = detail.clock?.displayValue || "";
+                            if (clock && !clock.endsWith("'")) clock += "'";
+
+                            let notes = "";
+                            if (detail.penalty) notes = " (Pen)";
+                            if (detail.ownGoal) notes = " (ET)";
+
+                            goals.push({
+                                playerName: playerName,
+                                teamId: scoringTeamId,
+                                text: `[${runningHome}:${runningAway}] ${playerName} (${clock})${notes}`
+                            });
+                        }
+                    });
+                }
+
+                let goalsHomeList = goals.filter(g => g.teamId === homeComp.team.id).map(g => `⚽ ${g.text}`);
+                let goalsAwayList = goals.filter(g => g.teamId === awayComp.team.id).map(g => `⚽ ${g.text}`);
+
+                leagueMatches[currentMatchday].push({
+                    home: homeComp.team.displayName,
+                    away: awayComp.team.displayName,
+                    homeLogo: homeComp.team.logo || '',
+                    awayLogo: awayComp.team.logo || '',
+                    date: dateStr,
+                    time: timeStr,
+                    homeScore: homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null,
+                    awayScore: awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null,
+                    isFinished: statusType === 'post',
+                    isLive: isLive,
+                    dateTime: ev.date,
+                    goalsHome: goalsHomeList,
+                    goalsAway: goalsAwayList
+                });
+            });
+
+            leagueMatches[currentMatchday].sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
+
+            let liveIndicator = document.getElementById('live-indicator');
+            if (hasLive) {
+                liveIndicator.style.display = 'flex';
+                if (!autoRefreshTimer) autoRefreshTimer = setInterval(refreshAllData, 15000);
+            } else {
+                liveIndicator.style.display = 'none';
             }
 
-            try {
-                const promises = datesToFetch.map(dateStr => 
-                    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=${dateStr}`)
-                        .then(res => res.json())
-                        .then(data => data.events || [])
-                        .catch(() => [])
-                );
+        } catch (e) {
+            console.error("Fehler beim Laden der Spieldaten:", e);
+        }
 
-                const results = await Promise.all(promises);
-                let events = results.flat();
+        renderMatchdayTable();
+        updateWidgetsWithAllMatchdays();
+    }
 
-                const eventMap = {};
-                events.forEach(e => { if (e && e.id) eventMap[e.id] = e; });
-                events = Object.values(eventMap);
+    function getTeamHtml(teamName, logoUrl, alignRight = false, goals = []) {
+        let logoHtml = logoUrl ? '<img src="' + logoUrl + '" alt="' + teamName + '" class="team-mini-logo">' : '';
+        let goalsHtml = '';
+        if (goals && goals.length > 0) {
+            let alignmentStyle = alignRight ? 'text-align: right;' : 'text-align: left;';
+            let indentStyle = alignRight ? 'padding-right: 30px;' : 'padding-left: 30px;';
+            goalsHtml = `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; ${alignmentStyle} ${indentStyle}">${goals.join('<br>')}</div>`;
+        }
 
-                leagueMatches[currentMatchday] = [];
-                let hasLive = false;
+        if (alignRight) {
+            return `<div style="display: flex; flex-direction: column;"><div class="team-cell right" style="justify-content: flex-end;"><span>${teamName}</span>${logoHtml}</div>${goalsHtml}</div>`;
+        } else {
+            return `<div style="display: flex; flex-direction: column;"><div class="team-cell">${logoHtml}<span>${teamName}</span></div>${goalsHtml}</div>`;
+        }
+    }
 
-                events.forEach(ev => {
-                    const comp = ev.competitions?.[0];
-                    if (!comp) return;
+    function renderMatchdayTable() {
+        let tbody = document.getElementById('matchdayTableBody');
+        tbody.innerHTML = '';
+        let matches = leagueMatches[currentMatchday] || [];
 
-                    const homeComp = comp.competitors.find(c => c.homeAway === 'home');
-                    const awayComp = comp.competitors.find(c => c.homeAway === 'away');
-                    if (!homeComp || !awayComp) return;
+        if (matches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine Spiele für Spieltag ' + currentMatchday + ' gefunden.</td></tr>';
+            return;
+        }
 
-                    const statusType = ev.status.type.state;
-                    const isLive = statusType === 'in';
-                    if (isLive) hasLive = true;
+        matches.forEach(m => {
+            let hasResult = m.homeScore !== undefined && m.homeScore !== null && m.awayScore !== undefined && m.awayScore !== null;
+            let formattedDate = m.date || '-';
+            let timeStr = m.time ? ' ' + m.time + ' Uhr' : '';
+            let isLFCMatch = (m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool'));
 
-                    let matchDateObj = new Date(ev.date);
-                    let dateStr = !isNaN(matchDateObj.getTime()) ? matchDateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "";
-                    let timeStr = !isNaN(matchDateObj.getTime()) ? matchDateObj.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : "15:00";
+            let resultDisplay = hasResult ? '<strong>' + m.homeScore + ':' + m.awayScore + '</strong>' : '<span style="color: var(--text-muted); font-style: italic;">vs</span>';
+            if (m.isLive) {
+                resultDisplay += '<div style="font-size: 0.65rem; color: #f87171; font-weight: bold; margin-top: 2px; text-align: center;">🔴 LIVE</div>';
+            } else if (m.isFinished) {
+                resultDisplay += '<div style="font-size: 0.65rem; color: #3fb950; margin-top: 2px; text-align: center;">(Endstand)</div>';
+            }
 
-                    let goals = [];
-                    let runningHome = 0;
-                    let runningAway = 0;
+            let tr = document.createElement('tr');
+            if (isLFCMatch) tr.classList.add('lfc-match-row');
 
-                    if (comp.details && Array.isArray(comp.details)) {
-                        comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
-                        
-                        comp.details.forEach(detail => {
-                            if (detail.type?.text === "Goal" || detail.scoringPlay || detail.goalValue > 0) {
-                                let playerName = detail.scorer?.athlete?.displayName 
-                                    || detail.athlete?.displayName 
-                                    || (detail.athletesInvolved && detail.athletesInvolved[0]?.displayName)
-                                    || "";
+            let homeCellContent = getTeamHtml(m.home, m.homeLogo, true, m.goalsHome);
+            let awayCellContent = getTeamHtml(m.away, m.awayLogo, false, m.goalsAway);
 
-                                if (!playerName && detail.text) {
-                                    let cleanText = detail.text.replace(/scored.*\$/, '').trim();
-                                    if (cleanText && cleanText.toLowerCase() !== 'goal') playerName = cleanText;
+            if (m.home.toLowerCase().includes('liverpool')) homeCellContent = '<span style="color:#ffffff; font-weight:bold;">' + homeCellContent + '</span>';
+            if (m.away.toLowerCase().includes('liverpool')) awayCellContent = '<span style="color:#ffffff; font-weight:bold;">' + awayCellContent + '</span>';
+
+            tr.innerHTML = `
+                <td style="font-size: 0.8rem; color: #ffffff; vertical-align: top;">${formattedDate}${timeStr}</td>
+                <td style="text-align: right; vertical-align: top;">${homeCellContent}</td>
+                <td style="text-align: center; vertical-align: middle;">${resultDisplay}</td>
+                <td style="text-align: left; vertical-align: top;">${awayCellContent}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function loadStandings() {
+        const url = "https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings";
+        const tbody = document.getElementById("tableBody");
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const entries = data.children?.[0]?.standings?.entries || data.standings?.entries || [];
+            renderTable(entries, tbody);
+        } catch (error) {
+            console.error("Fehler beim Abrufen der Tabelle:", error);
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #f85149; padding: 30px;">Fehler beim Laden der Tabelle.</td></tr>';
+        }
+    }
+
+    function renderTable(entries, tbody) {
+        tbody.innerHTML = "";
+        if (!entries || entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Keine Tabellendaten gefunden.</td></tr>';
+            return;
+        }
+
+        entries.forEach((entry, idx) => {
+            const team = entry.team;
+            const stats = entry.stats || [];
+            const getStat = (name) => stats.find(s => s.name === name)?.displayValue || "0";
+
+            const rank = idx + 1;
+            const games = getStat("gamesPlayed");
+            const wins = getStat("wins");
+            const draws = getStat("ties");
+            const losses = getStat("losses");
+            const points = getStat("points");
+            const diff = getStat("pointDifferential");
+            const goalsFor = getStat("pointsFor");
+            const goalsAgainst = getStat("pointsAgainst");
+
+            const tr = document.createElement("tr");
+            if (rank <= 4) tr.classList.add('cl-zone');
+            else if (rank === 5) tr.classList.add('el-zone');
+            else if (rank >= 18) tr.classList.add('relegation-zone');
+
+            let isLFC = team?.displayName?.toLowerCase().includes('liverpool');
+            if (isLFC) tr.classList.add('lfc-team-row');
+
+            let teamCell = `<div class="team-cell"><img src="${team?.logos?.[0]?.href || ''}" class="team-mini-logo" alt="Logo"><span>${team?.displayName || 'Unbekannt'}</span></div>`;
+
+            tr.innerHTML = `
+                <td style="font-weight: bold; color: var(--lfc-gold);">${rank}.</td>
+                <td>${teamCell}</td>
+                <td style="text-align: center;">${games}</td>
+                <td style="text-align: center;">${wins}</td>
+                <td style="text-align: center;">${draws}</td>
+                <td style="text-align: center;">${losses}</td>
+                <td style="text-align: center; color: var(--text-muted);">${goalsFor}:${goalsAgainst}</td>
+                <td style="text-align: center; color: ${parseInt(diff) > 0 ? '#3fb950' : (parseInt(diff) < 0 ? '#f85149' : 'inherit')}">${diff}</td>
+                <td style="text-align: center; font-weight: bold; color: var(--lfc-gold);">${points}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function updateWidgetsWithAllMatchdays() {
+        let fetchPromises = [];
+        for (let mw = 1; mw <= currentMatchday; mw++) {
+            if (!leagueMatches[mw] && MATCHWEEK_START_DATES[mw]) {
+                fetchPromises.push(loadMatchdayQuiet(mw));
+            }
+        }
+        if (fetchPromises.length > 0) {
+            await Promise.all(fetchPromises);
+        }
+        updateWidgets();
+    }
+
+    async function loadMatchdayQuiet(mw) {
+        const startBaseStr = MATCHWEEK_START_DATES[mw];
+        if (!startBaseStr) return;
+        const startDateObj = parseEspnDate(startBaseStr);
+        const datesToFetch = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(startDateObj);
+            d.setDate(startDateObj.getDate() + i);
+            datesToFetch.push(formatDateKey(d));
+        }
+        try {
+            const promises = datesToFetch.map(dateStr => 
+                fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=${dateStr}`)
+                    .then(res => res.json())
+                    .then(data => data.events || [])
+                    .catch(() => [])
+            );
+            const results = await Promise.all(promises);
+            let events = results.flat();
+            let matches = [];
+            events.forEach(ev => {
+                const comp = ev.competitions?.[0];
+                if (!comp) return;
+                const homeComp = comp.competitors.find(c => c.homeAway === 'home');
+                const awayComp = comp.competitors.find(c => c.homeAway === 'away');
+                if (!homeComp || !awayComp) return;
+                const statusType = ev.status.type.state;
+
+                let goalsHome = [];
+                let goalsAway = [];
+                let runningHome = 0;
+                let runningAway = 0;
+
+                if (comp.details && Array.isArray(comp.details)) {
+                    comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
+                    comp.details.forEach(detail => {
+                        if (detail.type?.text === "Goal" || detail.scoringPlay || detail.goalValue > 0) {
+                            let playerName = detail.scorer?.athlete?.displayName || detail.athlete?.displayName || "";
+                            if (!playerName && detail.text) playerName = detail.text.replace(/scored.*\$/, '').trim();
+                            const scoringTeamId = detail.team?.id;
+                            const isHomeGoal = (scoringTeamId === homeComp.team.id);
+                            const isAwayGoal = (scoringTeamId === awayComp.team.id);
+                            if (isHomeGoal) runningHome++;
+                            if (isAwayGoal) runningAway++;
+                            if (!playerName) playerName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
+                            let clock = detail.clock?.displayValue || "";
+                            if (clock && !clock.endsWith("'")) clock += "'";
+                            
+                            let goalText = `[${runningHome}:${runningAway}] ${playerName} (${clock})`;
+                            if (isHomeGoal) goalsHome.push(goalText);
+                            if (isAwayGoal) goalsAway.push(goalText);
+                        }
+                    });
+                }
+
+                matches.push({
+                    home: homeComp.team.displayName,
+                    away: awayComp.team.displayName,
+                    homeLogo: homeComp.team.logo || '',
+                    awayLogo: awayComp.team.logo || '',
+                    homeScore: homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null,
+                    awayScore: awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null,
+                    dateTime: ev.date,
+                    goalsHome: goalsHome,
+                    goalsAway: goalsAway
+                });
+            });
+            leagueMatches[mw] = matches;
+        } catch (e) {
+            console.error("Quiet load error", e);
+        }
+    }
+
+    function updateWidgets() {
+        let allLFCMatches = [];
+        for (let mDay in leagueMatches) {
+            let matches = leagueMatches[mDay];
+            if (Array.isArray(matches)) {
+                matches.forEach(m => {
+                    if (m.home && m.away && (m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool'))) {
+                        allLFCMatches.push(Object.assign({ matchday: parseInt(mDay) }, m));
+                    }
+                });
+            }
+        }
+        allLFCMatches.sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
+
+        let now = new Date();
+        let nextMatch = allLFCMatches.find(m => new Date(m.dateTime || 0) >= now && (m.homeScore === null || m.homeScore === undefined));
+        let pastMatches = allLFCMatches.filter(m => m.homeScore !== null && m.homeScore !== undefined);
+        let lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
+
+        let nextWidget = document.getElementById('nextMatchWidget');
+        if (nextMatch) {
+            nextWidget.innerHTML = `<strong>ST ${nextMatch.matchday}</strong> — ${nextMatch.date || ''} ${nextMatch.time || ''}<br><div style="margin-top:4px; font-weight:bold;">${nextMatch.home} vs ${nextMatch.away}</div>`;
+        } else {
+            nextWidget.innerHTML = "Kein anstehendes Spiel gefunden.";
+        }
+
+        let lastWidget = document.getElementById('lastMatchWidget');
+        if (lastMatch) {
+            lastWidget.innerHTML = `<strong>ST ${lastMatch.matchday}</strong> (${lastMatch.date || ''})<br><div style="margin-top:6px; font-weight:bold;">${lastMatch.home} ${lastMatch.homeScore}:${lastMatch.awayScore} ${lastMatch.away}</div>`;
+        } else {
+            lastWidget.innerHTML = "Noch kein beendetes Spiel.";
+        }
+
+        let played = 0, won = 0, draw = 0, lost = 0, goalsFor = 0, goalsAgainst = 0, points = 0;
+        let homePlayed = 0, homeWon = 0, homeDraw = 0, homeLost = 0, homePts = 0;
+        let awayPlayed = 0, awayWon = 0, awayDraw = 0, awayLost = 0, awayPts = 0;
+        let formBadgesHtml = '';
+        let lfcScorersMap = {};
+
+        pastMatches.forEach(m => {
+            let isHome = m.home.toLowerCase().includes('liverpool');
+            let myG = isHome ? m.homeScore : m.awayScore;
+            let oppG = isHome ? m.awayScore : m.homeScore;
+            played++;
+            goalsFor += myG; goalsAgainst += oppG;
+
+            if (isHome) {
+                homePlayed++;
+                if (myG > oppG) { homeWon++; homePts += 3; }
+                else if (myG === oppG) { homeDraw++; homePts += 1; }
+                else { homeLost++; }
+            } else {
+                awayPlayed++;
+                if (myG > oppG) { awayWon++; awayPts += 3; }
+                else if (myG === oppG) { awayDraw++; awayPts += 1; }
+                else { awayLost++; }
+            }
+
+            if (myG > oppG) {
+                won++; points += 3;
+                formBadgesHtml += `<span class="form-badge form-win" title="Sieg">S</span>`;
+            } else if (myG === oppG) {
+                draw++; points += 1;
+                formBadgesHtml += `<span class="form-badge form-draw" title="Unentschieden">U</span>`;
+            } else {
+                lost++;
+                formBadgesHtml += `<span class="form-badge form-loss" title="Niederlage">N</span>`;
+            }
+
+            let parseGoalsList = (gList, teamName) => {
+                if (teamName.toLowerCase().includes('liverpool') && Array.isArray(gList)) {
+                    gList.forEach(gStr => {
+                        let cleanName = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').split('(')[0].trim();
+                        if (cleanName) lfcScorersMap[cleanName] = (lfcScorersMap[cleanName] || 0) + 1;
+                    });
+                }
+            };
+            parseGoalsList(m.goalsHome, m.home);
+            parseGoalsList(m.goalsAway, m.away);
+        });
+
+        document.getElementById('lfcStatsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Spiele</div><div class="stat-value">${played}</div></div>
+            <div class="stat-card"><div class="stat-label">Siege</div><div class="stat-value" style="color: #3fb950;">${won}</div></div>
+            <div class="stat-card"><div class="stat-label">Remis</div><div class="stat-value" style="color: #ffffff;">${draw}</div></div>
+            <div class="stat-card"><div class="stat-label">Niederlagen</div><div class="stat-value" style="color: #f85149;">${lost}</div></div>
+            <div class="stat-card"><div class="stat-label">Tore</div><div class="stat-value">${goalsFor}:${goalsAgainst}</div></div>
+            <div class="stat-card"><div class="stat-label">Punkte</div><div class="stat-value">${points}</div></div>
+        `;
+
+        document.getElementById('homeAwayWidget').innerHTML = `
+            Heim: ${homeWon}S - ${homeDraw}U - ${homeLost}N (${homePts} Pkt)<br>
+            Auswärts: ${awayWon}S - ${awayDraw}U - ${awayLost}N (${awayPts} Pkt)
+        `;
+
+        let sortedScorers = Object.keys(lfcScorersMap).map(name => ({ name: name, goals: lfcScorersMap[name] }));
+        sortedScorers.sort((a, b) => b.goals - a.goals);
+        let top3 = sortedScorers.slice(0, 3);
+
+        let topScorersWidget = document.getElementById('topScorersWidget');
+        if (top3.length > 0) {
+            let html = '<div style="display:flex; flex-direction:column; gap:4px;">';
+            top3.forEach((s, idx) => {
+                let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : '🥉');
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; background:#17131a; padding:4px 8px; border-radius:4px;"><span>${medal} ${s.name}</span><strong style="color:#ffffff;">${s.goals} Tore</strong></div>`;
+            });
+            html += '</div>';
+            topScorersWidget.innerHTML = html;
+        } else {
+            topScorersWidget.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Noch keine Torschützen erfasst</span>';
+        }
+
+        let formWidget = document.getElementById('formCurveWidget');
+        if (formBadgesHtml) {
+            formWidget.innerHTML = formBadgesHtml;
+        } else {
+            formWidget.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Noch keine beendeten Spiele</span>';
+        }
+    }
+
+    async function openScorersModal() {
+        let tbody = document.getElementById('scorersModalBody');
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade alle Tore der Premier League...</td></tr>`;
+        document.getElementById('scorersModal').style.display = 'flex';
+
+        let fetchPromises = [];
+        for (let mw = 1; mw <= 38; mw++) {
+            if (!leagueMatches[mw] && MATCHWEEK_START_DATES[mw]) {
+                fetchPromises.push(loadMatchdayQuiet(mw));
+            }
+        }
+        if (fetchPromises.length > 0) {
+            await Promise.all(fetchPromises);
+        }
+
+        let aggregatedScorers = {};
+        for (let mw = 1; mw <= 38; mw++) {
+            let matches = leagueMatches[mw] || [];
+            matches.forEach(m => {
+                let collectGoals = (gList, teamName, logoUrl) => {
+                    if (Array.isArray(gList)) {
+                        gList.forEach(gStr => {
+                            let cleanName = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').split('(')[0].trim();
+                            if (cleanName && cleanName.toLowerCase() !== 'tor') {
+                                if (!aggregatedScorers[cleanName]) {
+                                    aggregatedScorers[cleanName] = { count: 0, team: teamName, logo: logoUrl };
                                 }
-
-                                const scoringTeamId = detail.team?.id;
-                                const isHomeGoal = (scoringTeamId === homeComp.team.id);
-                                const isAwayGoal = (scoringTeamId === awayComp.team.id);
-
-                                if (isHomeGoal) runningHome++;
-                                if (isAwayGoal) runningAway++;
-
-                                if (!playerName) playerName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
-
-                                let teamName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
-                                let clock = detail.clock?.displayValue || "";
-                                if (clock && !clock.endsWith("'")) clock += "'";
-
-                                let notes = "";
-                                if (detail.penalty) notes = " (Pen)";
-                                if (detail.ownGoal) notes = " (ET)";
-
-                                goals.push({
-                                    playerName: playerName,
-                                    team: teamName,
-                                    logo: detail.team?.logo || (isHomeGoal ? homeComp.team.logo : awayComp.team.logo),
-                                    info: `${clock}${notes}`,
-                                    text: `[${runningHome}:${runningAway}] ${teamName}: ${playerName} (${clock})${notes}`
-                                });
+                                aggregatedScorers[cleanName].count++;
                             }
                         });
                     }
-
-                    leagueMatches[currentMatchday].push({
-                        home: homeComp.team.displayName,
-                        away: awayComp.team.displayName,
-                        homeLogo: homeComp.team.logo || '',
-                        awayLogo: awayComp.team.logo || '',
-                        date: dateStr,
-                        time: timeStr,
-                        homeScore: homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null,
-                        awayScore: awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null,
-                        isFinished: statusType === 'post',
-                        isLive: isLive,
-                        dateTime: ev.date,
-                        goals: goals
-                    });
-                });
-
-                leagueMatches[currentMatchday].sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
-
-                let liveIndicator = document.getElementById('live-indicator');
-                if (hasLive) {
-                    liveIndicator.classList.remove('hidden');
-                    liveIndicator.classList.add('flex');
-                    if (!autoRefreshTimer) autoRefreshTimer = setInterval(refreshAllData, 15000);
-                } else {
-                    liveIndicator.classList.add('hidden');
-                    liveIndicator.classList.remove('flex');
-                }
-
-            } catch (e) {
-                console.error("Fehler beim Laden der Spieldaten:", e);
-            }
-
-            renderMatchdayGrid();
-        }
-
-        function renderMatchdayGrid() {
-            let container = document.getElementById('gamesGridContainer');
-            container.innerHTML = '';
-            let matches = leagueMatches[currentMatchday] || [];
-
-            if (matches.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">Keine Spiele für Spieltag ${currentMatchday} gefunden.</div>`;
-                return;
-            }
-
-            matches.forEach(m => {
-                let hasResult = m.homeScore !== null && m.awayScore !== null;
-                
-                let statusBadge = `<span style="background: rgba(38,38,43,0.8); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 3px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold;">ENDE</span>`;
-                if (m.isLive) {
-                    statusBadge = `<span style="background: rgba(127,29,29,0.8); color: #f87171; border: 1px solid rgba(248,113,113,0.4); padding: 3px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold;" class="live-dot">🔴 LIVE</span>`;
-                } else if (!hasResult && !m.isFinished) {
-                    statusBadge = `<span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${m.time || '15:00'} UHR</span>`;
-                }
-
-                let homeScoreStr = hasResult ? m.homeScore : '-';
-                let awayScoreStr = hasResult ? m.awayScore : '-';
-
-                let goalsHtml = '';
-                if (m.goals && m.goals.length > 0) {
-                    let items = m.goals.map(g => `<div style="font-size: 0.78rem; color: #ef4444; margin-top: 3px; display: flex; align-items: center; gap: 5px;"><span>⚽</span> <span>${g.text}</span></div>`).join('');
-                    goalsHtml = `
-                        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(38,38,43,0.8); display: flex; flex-direction: column; gap: 2px;">
-                            ${items}
-                        </div>
-                    `;
-                }
-
-                let card = document.createElement('div');
-                card.className = "bg-[#101012] border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-lg hover:border-neutral-700 transition";
-                
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${m.date || ''} — ${m.time || ''} UHR</span>
-                        ${statusBadge}
-                    </div>
-
-                    <div class="space-y-2">
-                        <!-- Heimteam -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(23,23,26,0.6); padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(38,38,43,0.8);">
-                            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                                <img src="${m.homeLogo}" class="team-mini-logo" alt="Logo">
-                                <span class="font-bold text-white text-sm truncate" style="color: #ef4444;">${m.home}</span>
-                            </div>
-                            <span style="background: #0c0a09; border: 1px solid var(--border-color); color: white; font-weight: 900; padding: 4px 12px; border-radius: 8px; font-size: 1.1rem; min-width: 40px; text-align: center;">
-                                ${homeScoreStr}
-                            </span>
-                        </div>
-
-                        <!-- Gastteam -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(23,23,26,0.6); padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(38,38,43,0.8);">
-                            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                                <img src="${m.awayLogo}" class="team-mini-logo" alt="Logo">
-                                <span class="font-bold text-white text-sm truncate" style="color: #cbd5e1;">${m.away}</span>
-                            </div>
-                            <span style="background: #0c0a09; border: 1px solid var(--border-color); color: white; font-weight: 900; padding: 4px 12px; border-radius: 8px; font-size: 1.1rem; min-width: 40px; text-align: center;">
-                                ${awayScoreStr}
-                            </span>
-                        </div>
-                    </div>
-                    ${goalsHtml}
-                `;
-                container.appendChild(card);
+                };
+                collectGoals(m.goalsHome, m.home, m.homeLogo);
+                collectGoals(m.goalsAway, m.away, m.awayLogo);
             });
         }
 
-        async function loadStandings() {
-            const url = "https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings";
-            const tbody = document.getElementById("tableBody");
+        let scorersArray = Object.keys(aggregatedScorers).map(name => ({
+            name: name,
+            goals: aggregatedScorers[name].count,
+            team: aggregatedScorers[name].team,
+            logo: aggregatedScorers[name].logo
+        }));
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const entries = data.children?.[0]?.standings?.entries || data.standings?.entries || [];
-                renderTable(entries, tbody);
-            } catch (error) {
-                console.error("Fehler beim Abrufen der Tabelle:", error);
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #f85149; padding: 30px;">Fehler beim Laden der Tabelle.</td></tr>';
-            }
-        }
-
-        function renderTable(entries, tbody) {
-            tbody.innerHTML = "";
-            if (!entries || entries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Keine Tabellendaten gefunden.</td></tr>';
-                return;
-            }
-
-            entries.forEach((entry, idx) => {
-                const team = entry.team;
-                const stats = entry.stats || [];
-                const getStat = (name) => stats.find(s => s.name === name)?.displayValue || "0";
-
-                const rank = idx + 1;
-                const games = getStat("gamesPlayed");
-                const wins = getStat("wins");
-                const draws = getStat("ties");
-                const losses = getStat("losses");
-                const points = getStat("points");
-                const diff = getStat("pointDifferential");
-                const goalsFor = getStat("pointsFor");
-                const goalsAgainst = getStat("pointsAgainst");
-
-                const tr = document.createElement("tr");
-                if (rank <= 4) tr.classList.add('cl-zone');
-                else if (rank === 5) tr.classList.add('el-zone');
-                else if (rank >= 18) tr.classList.add('relegation-zone');
-
-                let teamCell = `<div class="team-cell"><img src="${team?.logos?.[0]?.href || ''}" class="team-mini-logo" alt="Logo"><span>${team?.displayName || 'Unbekannt'}</span></div>`;
-
+        tbody.innerHTML = '';
+        if (scorersArray.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in den bisherigen Spieltagen erfasst.</td></tr>`;
+        } else {
+            scorersArray.sort((a, b) => b.goals - a.goals);
+            scorersArray.forEach((s, idx) => {
+                let tr = document.createElement('tr');
+                let logoHtml = s.logo ? `<img src="${s.logo}" alt="${s.team}" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 6px;">` : '';
                 tr.innerHTML = `
-                    <td style="font-weight: bold; color: var(--eng-accent);">${rank}.</td>
-                    <td>${teamCell}</td>
-                    <td style="text-align: center;">${games}</td>
-                    <td style="text-align: center;">${wins}</td>
-                    <td style="text-align: center;">${draws}</td>
-                    <td style="text-align: center;">${losses}</td>
-                    <td style="text-align: center; color: var(--text-muted);">${goalsFor}:${goalsAgainst}</td>
-                    <td style="text-align: center; color: ${parseInt(diff) > 0 ? '#3fb950' : (parseInt(diff) < 0 ? '#f85149' : 'inherit')}">${diff}</td>
-                    <td style="text-align: center; font-weight: bold; color: var(--eng-accent);">${points}</td>
+                    <td style="text-align: center; font-weight: bold; color: var(--lfc-gold);">${idx + 1}.</td>
+                    <td>
+                        <div style="font-weight: bold; color: #ffffff;">${s.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center;">${logoHtml}<span>${s.team}</span></div>
+                    </td>
+                    <td style="text-align: center; font-weight: bold; color: var(--lfc-gold); font-size: 1.1rem;">${s.goals}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
+    }
 
-        async function openScorersModal() {
-            let tbody = document.getElementById('scorersModalBody');
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade alle Tore der bisherigen Spieltage...</td></tr>`;
-            document.getElementById('scorersModal').style.display = 'flex';
+    function closeScorersModal() { document.getElementById('scorersModal').style.display = 'none'; }
 
-            let fetchPromises = [];
-            for (let mw = 1; mw <= currentMatchday; mw++) {
-                if (!leagueMatches[mw] && MATCHWEEK_START_DATES[mw]) {
-                    let startBaseStr = MATCHWEEK_START_DATES[mw];
-                    let startDateObj = parseEspnDate(startBaseStr);
-                    let datesToFetch = [];
-                    for (let i = 0; i < 7; i++) {
-                        let d = new Date(startDateObj);
-                        d.setDate(startDateObj.getDate() + i);
-                        datesToFetch.push(formatDateKey(d));
-                    }
+    function openLFCMatchesModal() {
+        let modalBody = document.getElementById('lfcMatchesModalBody');
+        modalBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade alle LFC Spiele...</td></tr>';
+        document.getElementById('lfcMatchesModal').style.display = 'flex';
 
-                    let subPromises = datesToFetch.map(dateStr => 
-                        fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=${dateStr}`)
-                            .then(res => res.json())
-                            .then(data => data.events || [])
-                            .catch(() => [])
-                    );
-
-                    fetchPromises.push(
-                        Promise.all(subPromises).then(results => {
-                            let events = results.flat();
-                            let matches = [];
-                            events.forEach(ev => {
-                                const comp = ev.competitions?.[0];
-                                if (!comp) return;
-                                const homeComp = comp.competitors.find(c => c.homeAway === 'home');
-                                const awayComp = comp.competitors.find(c => c.homeAway === 'away');
-                                if (!homeComp || !awayComp) return;
-
-                                let goals = [];
-                                let runningHome = 0;
-                                let runningAway = 0;
-
-                                if (comp.details && Array.isArray(comp.details)) {
-                                    comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
-                                    comp.details.forEach(detail => {
-                                        if (detail.type?.text === "Goal" || detail.scoringPlay || detail.goalValue > 0) {
-                                            let playerName = detail.scorer?.athlete?.displayName 
-                                                || detail.athlete?.displayName 
-                                                || (detail.athletesInvolved && detail.athletesInvolved[0]?.displayName)
-                                                || "";
-                                            if (!playerName && detail.text) {
-                                                let cleanText = detail.text.replace(/scored.*\$/, '').trim();
-                                                if (cleanText && cleanText.toLowerCase() !== 'goal') playerName = cleanText;
-                                            }
-
-                                            const scoringTeamId = detail.team?.id;
-                                            const isHomeGoal = (scoringTeamId === homeComp.team.id);
-                                            const isAwayGoal = (scoringTeamId === awayComp.team.id);
-
-                                            if (isHomeGoal) runningHome++;
-                                            if (isAwayGoal) runningAway++;
-
-                                            if (!playerName) playerName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
-
-                                            let teamName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
-                                            let clock = detail.clock?.displayValue || "";
-                                            if (clock && !clock.endsWith("'")) clock += "'";
-
-                                            let notes = "";
-                                            if (detail.penalty) notes = " (Pen)";
-                                            if (detail.ownGoal) notes = " (ET)";
-
-                                            goals.push({
-                                                playerName: playerName,
-                                                team: teamName,
-                                                logo: detail.team?.logo || (isHomeGoal ? homeComp.team.logo : awayComp.team.logo),
-                                                info: `${clock}${notes}`
-                                            });
-                                        }
-                                    });
-                                }
-                                matches.push({ goals: goals });
-                            });
-                            leagueMatches[mw] = matches;
-                        })
-                    );
+        Promise.all(Object.keys(MATCHWEEK_START_DATES).map(mw => {
+            if (!leagueMatches[mw]) return loadMatchdayQuiet(mw);
+            return Promise.resolve();
+        })).then(() => {
+            modalBody.innerHTML = '';
+            let lfcMatches = [];
+            for (let mDay in leagueMatches) {
+                let matchesArr = leagueMatches[mDay];
+                if (Array.isArray(matchesArr)) {
+                    matchesArr.forEach(m => {
+                        if (m.home && m.away && (m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool'))) {
+                            lfcMatches.push(Object.assign({ matchday: parseInt(mDay) }, m));
+                        }
+                    });
                 }
             }
+            lfcMatches.sort((a, b) => a.matchday - b.matchday);
 
-            await Promise.all(fetchPromises);
-
-            let aggregatedScorers = {};
-            for (let mw = 1; mw <= currentMatchday; mw++) {
-                let matches = leagueMatches[mw] || [];
-                matches.forEach(m => {
-                    if (m.goals) {
-                        m.goals.forEach(g => {
-                            let name = g.playerName;
-                            if (name && name.toLowerCase() !== 'tor') {
-                                if (!aggregatedScorers[name]) {
-                                    aggregatedScorers[name] = { count: 0, team: g.team, logo: g.logo, details: [] };
-                                }
-                                aggregatedScorers[name].count++;
-                                if (g.info) aggregatedScorers[name].details.push(g.info);
-                            }
-                        });
-                    }
-                });
+            if (lfcMatches.length === 0) {
+                modalBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine LFC-Spiele gefunden.</td></tr>';
+                return;
             }
 
-            let scorersArray = Object.keys(aggregatedScorers).map(name => ({
-                name: name,
-                goals: aggregatedScorers[name].count,
-                team: aggregatedScorers[name].team,
-                logo: aggregatedScorers[name].logo,
-                details: aggregatedScorers[name].details
-            }));
-
-            tbody.innerHTML = '';
-            if (scorersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in den Spieltagen erfasst.</td></tr>`;
-            } else {
-                scorersArray.sort((a, b) => b.goals - a.goals);
-                scorersArray.forEach((s, idx) => {
-                    let tr = document.createElement('tr');
-                    let logoHtml = s.logo ? `<img src="${s.logo}" alt="${s.team}" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 6px;">` : '';
-                    let detailsHtml = s.details.length > 0 ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Minuten: ${s.details.join(', ')}</div>` : '';
-
-                    tr.innerHTML = `
-                        <td style="text-align: center; font-weight: bold; color: var(--eng-accent);">${idx + 1}.</td>
-                        <td>
-                            <div style="font-weight: bold; color: #ffffff;">${s.name}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center;">${logoHtml}<span>${s.team}</span></div>
-                            ${detailsHtml}
-                        </td>
-                        <td style="text-align: center; font-weight: bold; color: var(--eng-accent); font-size: 1.1rem;">${s.goals}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-
-        function closeScorersModal() {
-            document.getElementById('scorersModal').style.display = 'none';
-        }
-
-        window.onclick = function(e) {
-            if (e.target === document.getElementById('scorersModal')) closeScorersModal();
-        }
-
-        function renderAll() {
-            document.getElementById('matchdayDisplay').textContent = "Spieltag " + currentMatchday;
-            document.getElementById('matchdayTableHeader').textContent = `Spieltag ${currentMatchday} — Spiele & Ergebnisse`;
-            loadAllMatchdays();
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            renderAll();
-            loadStandings();
+            lfcMatches.forEach(m => {
+                let hasResult = m.homeScore !== undefined && m.homeScore !== null && m.awayScore !== undefined && m.awayScore !== null;
+                let resultDisplay = hasResult ? `<strong>${m.homeScore}:${m.awayScore}</strong>` : '<span style="color:var(--text-muted);">-:-</span>';
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: center; color: var(--lfc-gold); font-weight: bold;">ST ${m.matchday}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">${m.date || 'Offen'}</td>
+                    <td style="text-align: right; font-weight:${m.home.toLowerCase().includes('liverpool')?'bold':'normal'}; color:${m.home.toLowerCase().includes('liverpool')?'var(--lfc-gold)':'#fff'}">${m.home}</td>
+                    <td style="text-align: center;">${resultDisplay}</td>
+                    <td style="font-weight:${m.away.toLowerCase().includes('liverpool')?'bold':'normal'}; color:${m.away.toLowerCase().includes('liverpool')?'var(--lfc-gold)':'#fff'}">${m.away}</td>
+                `;
+                modalBody.appendChild(tr);
+            });
         });
-    </script>
+    }
+
+    function closeLFCMatchesModal() { document.getElementById('lfcMatchesModal').style.display = 'none'; }
+
+    function renderAll() {
+        document.getElementById('matchdayDisplay').textContent = "Spieltag " + currentMatchday;
+        document.getElementById('matchdayTableHeader').textContent = `Spieltag ${currentMatchday} — Spiele & Ergebnisse`;
+        loadAllMatchdays();
+    }
+
+    window.onclick = function(e) {
+        if (e.target === document.getElementById('scorersModal')) closeScorersModal();
+        if (e.target === document.getElementById('lfcMatchesModal')) closeLFCMatchesModal();
+        if (e.target === document.getElementById('legendModal')) closeLegendModal();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initVisitorCounter();
+        renderAll();
+        loadStandings();
+    });
+</script>
+
 </body>
 </html>
