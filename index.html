@@ -803,14 +803,31 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     table: 'push_subscriptions_lfc',
-                    title: "🔴 Liverpool Test-Tor-Alarm",
-                    body: "Das Test-Tor für den FC Liverpool wurde erfolgreich ausgelöst!"
+                    title: "🔴 LFC Tor-Alarm! (1:0)",
+                    body: "⚽ Mohamed Salah (24') hat zum 1:0 für FC Liverpool getroffen!"
                 })
             });
             if (response.ok) alert("Test-Push für Liverpool erfolgreich ausgelöst!");
             else alert("Fehler von der Edge Function.");
         } catch (e) {
             alert("Netzwerkfehler: " + e.message);
+        }
+    }
+
+    async function triggerLiveGoalPush(home, away, homeScore, awayScore, goalText) {
+        try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'push_subscriptions_lfc',
+                    title: `🔴 LFC Tor-Alarm! (${homeScore}:${awayScore})`,
+                    body: `⚽ ${goalText} (${home} vs ${away})`
+                })
+            });
+        } catch (e) {
+            console.error("Fehler beim automatischen Live-Push:", e);
         }
     }
 
@@ -885,6 +902,10 @@
             leagueMatches[currentMatchday] = [];
             let hasLive = false;
 
+            // Live-Tor-Vergleich laden
+            let liveScoresCache = JSON.parse(localStorage.getItem('lfc_live_scores_cache') || '{}');
+            let newScoresCache = {};
+
             events.forEach(ev => {
                 const comp = ev.competitions?.[0];
                 if (!comp) return;
@@ -939,14 +960,32 @@
                             goals.push({
                                 playerName: playerName,
                                 teamId: scoringTeamId,
-                                text: `[${runningHome}:${runningAway}] ${playerName} (${clock})${notes}`
+                                text: `${playerName} (${clock})${notes}`
                             });
                         }
                     });
                 }
 
-                let goalsHomeList = goals.filter(g => g.teamId === homeComp.team.id).map(g => `⚽ ${g.text}`);
-                let goalsAwayList = goals.filter(g => g.teamId === awayComp.team.id).map(g => `⚽ ${g.text}`);
+                let homeScoreVal = homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null;
+                let awayScoreVal = awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null;
+
+                // Automatische Tor-Prüfung für Liverpool-Spiele
+                let isLFCMatch = homeComp.team.displayName.toLowerCase().includes('liverpool') || awayComp.team.displayName.toLowerCase().includes('liverpool');
+                if (isLive && isLFCMatch && homeScoreVal !== null && awayScoreVal !== null) {
+                    let matchKey = ev.id;
+                    let lastState = liveScoresCache[matchKey];
+                    if (lastState) {
+                        if (homeScoreVal > lastState.home || awayScoreVal > lastState.away) {
+                            // Tor gefallen! Letzten Torschützen ermitteln
+                            let latestGoal = goals.length > 0 ? goals[goals.length - 1].text : "Tor!";
+                            triggerLiveGoalPush(homeComp.team.displayName, awayComp.team.displayName, homeScoreVal, awayScoreVal, latestGoal);
+                        }
+                    }
+                    newScoresCache[matchKey] = { home: homeScoreVal, away: awayScoreVal };
+                }
+
+                let goalsHomeList = goals.filter(g => g.teamId === homeComp.team.id).map(g => `⚽ [${runningHome}:${runningAway}] ${g.text}`);
+                let goalsAwayList = goals.filter(g => g.teamId === awayComp.team.id).map(g => `⚽ [${runningHome}:${runningAway}] ${g.text}`);
 
                 leagueMatches[currentMatchday].push({
                     home: homeComp.team.displayName,
@@ -955,8 +994,8 @@
                     awayLogo: awayComp.team.logo || '',
                     date: dateStr,
                     time: timeStr,
-                    homeScore: homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null,
-                    awayScore: awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null,
+                    homeScore: homeScoreVal,
+                    awayScore: awayScoreVal,
                     isFinished: statusType === 'post',
                     isLive: isLive,
                     dateTime: ev.date,
@@ -965,6 +1004,7 @@
                 });
             });
 
+            localStorage.setItem('lfc_live_scores_cache', JSON.stringify(newScoresCache));
             leagueMatches[currentMatchday].sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
 
             let liveIndicator = document.getElementById('live-indicator');
