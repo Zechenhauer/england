@@ -865,30 +865,32 @@
 
     async function triggerLiveGoalPush(matchId, home, away, homeScore, awayScore, goalText) {
         try {
+            let uniqueGoalId = `${matchId}_${homeScore}_${awayScore}`;
+
             let { data: existing, error: checkError } = await supabaseClient
                 .from('sent_goals_liverpool')
-                .select('*')
-                .eq('match_id', matchId)
-                .eq('home_score', homeScore)
-                .eq('away_score', awayScore)
+                .select('goal_id')
+                .eq('goal_id', uniqueGoalId)
                 .maybeSingle();
 
-            if (existing) return;
+            if (!existing && !checkError) {
+                let { error: insertError } = await supabaseClient
+                    .from('sent_goals_liverpool')
+                    .insert([{ goal_id: uniqueGoalId, match_id: matchId, home_score: homeScore, away_score: awayScore }]);
 
-            await supabaseClient
-                .from('sent_goals_liverpool')
-                .upsert({ match_id: matchId, home_score: homeScore, away_score: awayScore }, { onConflict: 'match_id' });
-
-            await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    table: 'push_subscriptions_lfc',
-                    title: `🔴 LFC Tor-Alarm! (${homeScore}:${awayScore})`,
-                    body: `⚽ ${goalText} (${home} vs ${away})`
-                })
-            });
+                if (!insertError) {
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            table: 'push_subscriptions_lfc',
+                            title: `🔴 LFC Tor-Alarm! (${homeScore}:${awayScore})`,
+                            body: `⚽ ${goalText} (${home} vs ${away})`
+                        })
+                    });
+                }
+            }
         } catch (e) {
             console.error("Fehler beim automatischen Live-Push:", e);
         }
