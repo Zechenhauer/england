@@ -15,6 +15,7 @@
         :root {
             --bg-color: #080709;
             --card-bg: #121014;
+            --card-inner: #0c080a;
             --text-color: #f3f4f6;
             --text-muted: #9ca3af;
             --border-color: #27232b;
@@ -117,18 +118,50 @@
             animation: pulse-red 1.2s infinite;
             display: inline-block;
         }
-        .live-badge {
-            display: none;
-            color: #f87171;
-            background: rgba(248, 113, 113, 0.15);
-            padding: 3px 10px;
-            border-radius: 4px;
-            border: 1px solid rgba(248, 113, 113, 0.4);
-            font-weight: bold;
+
+        /* TICKER-LAUFBAND OBEN (75s) */
+        .ticker-wrapper {
+            background: var(--card-inner);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--lfc-gold);
+            border-radius: 12px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            font-size: 0.85rem;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .ticker-text {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 75s linear infinite;
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+
+        .ticker-text:hover {
+            animation-play-state: paused;
+        }
+
+        .ticker-lfc-match {
+            background: rgba(200, 16, 46, 0.4);
+            border: 1px solid var(--lfc-gold);
+            color: var(--lfc-gold);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 0 4px;
         }
 
         .section-box {
@@ -473,7 +506,19 @@
     <div class="meta-info">
         <span>⚡ Web-App & Management: Jürgen Schützendorf</span>
         <span class="supabase-badge" id="cloudStatusBadge">● ESPN Live-Ticker Aktiv</span>
-        <div class="live-badge" id="live-indicator"><span class="live-dot"></span> LIVE-SPIEL LÄUFT</div>
+    </div>
+
+    <!-- TICKER-LAUFBAND OBEN -->
+    <div class="ticker-wrapper">
+        <div style="display: flex; align-items: center; gap: 8px; margin-right: 16px; flex-shrink: 0; z-index: 10; background: var(--card-inner); padding-right: 12px; border-right: 1px solid var(--border-color);">
+            <span id="tickerStatusIcon" class="live-dot"></span>
+            <span id="tickerTitle" style="font-weight: bold; color: var(--lfc-gold); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Premier League Ticker:</span>
+        </div>
+        <div style="overflow: hidden; width: 100%;">
+            <div id="tickerContent" class="ticker-text">
+                Lade Spielstände und Ergebnisse...
+            </div>
+        </div>
     </div>
 
     <!-- LIVERPOOL AUSWERTUNG -->
@@ -507,8 +552,8 @@
             <div class="dash-card-content" id="topScorersWidget">Wird berechnet...</div>
         </div>
         <div class="dash-card">
-            <div class="dash-card-title">🏟️ Heim vs. Auswärts</div>
-            <div class="dash-card-content" id="homeAwayWidget">Lade Bilanz...</div>
+            <div class="dash-card-title">🔥 Form-König (letzte 5 Spiele)</div>
+            <div class="dash-card-content" id="formKingWidget">Wird berechnet...</div>
         </div>
         <div class="dash-card">
             <div class="dash-card-title">⭐ Liverpool-Legenden (Anfield Wall of Fame)</div>
@@ -697,6 +742,10 @@
     let leagueMatches = {};
     let currentMatchday = 7;
     let autoRefreshTimer = null;
+    let nextMatchDateTime = null;
+    let countdownTimerInterval = null;
+    let cachedStandingsEntries = [];
+    let teamLogos = {};
 
     const MATCHWEEK_START_DATES = {
         1: "20260821", 2: "20260828", 3: "20260904", 4: "20260911", 5: "20260918",
@@ -814,8 +863,22 @@
         }
     }
 
-    async function triggerLiveGoalPush(home, away, homeScore, awayScore, goalText) {
+    async function triggerLiveGoalPush(matchId, home, away, homeScore, awayScore, goalText) {
         try {
+            let { data: existing, error: checkError } = await supabaseClient
+                .from('sent_goals_liverpool')
+                .select('*')
+                .eq('match_id', matchId)
+                .eq('home_score', homeScore)
+                .eq('away_score', awayScore)
+                .maybeSingle();
+
+            if (existing) return;
+
+            await supabaseClient
+                .from('sent_goals_liverpool')
+                .upsert({ match_id: matchId, home_score: homeScore, away_score: awayScore }, { onConflict: 'match_id' });
+
             await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
                 method: 'POST',
                 mode: 'cors',
@@ -913,6 +976,9 @@
                 const awayComp = comp.competitors.find(c => c.homeAway === 'away');
                 if (!homeComp || !awayComp) return;
 
+                if (homeComp.team.logo) teamLogos[homeComp.team.displayName.trim().toLowerCase()] = homeComp.team.logo;
+                if (awayComp.team.logo) teamLogos[awayComp.team.displayName.trim().toLowerCase()] = awayComp.team.logo;
+
                 const statusType = ev.status.type.state;
                 const isLive = statusType === 'in';
                 if (isLive) hasLive = true;
@@ -926,7 +992,6 @@
                 let runningAway = 0;
 
                 if (comp.details && Array.isArray(comp.details)) {
-                    // Chronologische Sortierung nach Zeit/Sekunden
                     comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
                     
                     comp.details.forEach(detail => {
@@ -993,7 +1058,7 @@
                         if (homeScoreVal > lastState.home || awayScoreVal > lastState.away) {
                             let goalsOnly = matchEvents.filter(e => e.type === 'goal');
                             let latestGoal = goalsOnly.length > 0 ? goalsOnly[goalsOnly.length - 1].text : "Tor!";
-                            triggerLiveGoalPush(homeComp.team.displayName, awayComp.team.displayName, homeScoreVal, awayScoreVal, latestGoal);
+                            triggerLiveGoalPush(ev.id, homeComp.team.displayName, awayComp.team.displayName, homeScoreVal, awayScoreVal, latestGoal);
                         }
                     }
                     newScoresCache[matchKey] = { home: homeScoreVal, away: awayScoreVal };
@@ -1022,13 +1087,7 @@
             localStorage.setItem('lfc_live_scores_cache', JSON.stringify(newScoresCache));
             leagueMatches[currentMatchday].sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
 
-            let liveIndicator = document.getElementById('live-indicator');
-            if (hasLive) {
-                liveIndicator.style.display = 'flex';
-                if (!autoRefreshTimer) autoRefreshTimer = setInterval(refreshAllData, 15000);
-            } else {
-                liveIndicator.style.display = 'none';
-            }
+            updateTopTicker(hasLive);
 
         } catch (e) {
             console.error("Fehler beim Laden der Spieldaten:", e);
@@ -1038,8 +1097,71 @@
         updateWidgetsWithAllMatchdays();
     }
 
+    function updateTopTicker(anyLive) {
+        let statusIcon = document.getElementById('tickerStatusIcon');
+        let tickerTitle = document.getElementById('tickerTitle');
+        let tickerContainer = document.getElementById('tickerContent');
+        tickerContainer.innerHTML = "";
+
+        if (anyLive) {
+            statusIcon.className = "live-dot";
+            tickerTitle.innerText = "🔴 Live-Spiel:";
+            
+            for (let mw = 1; mw <= 38; mw++) {
+                (leagueMatches[mw] || []).filter(m => m.isLive).forEach(m => {
+                    let isLFC = m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool');
+                    let matchText = `⚡ ${m.home} ${m.homeScore ?? 0}:${m.awayScore ?? 0} ${m.away} ⚡`;
+                    
+                    let span = document.createElement('span');
+                    if (isLFC) {
+                        span.className = "ticker-lfc-match";
+                    } else {
+                        span.style.margin = "0 10px";
+                    }
+                    span.innerText = matchText;
+                    tickerContainer.appendChild(span);
+                });
+            }
+            if (tickerContainer.children.length === 0) {
+                tickerContainer.innerText = "FC Liverpool im Live-Modus";
+            }
+        } else {
+            statusIcon.className = "inline-block w-2 h-2 rounded-full bg-[var(--lfc-gold)]";
+            tickerTitle.innerText = "📋 Spieltag-Ticker:";
+            
+            let currentMwMatches = leagueMatches[currentMatchday] || [];
+            if (currentMwMatches.length > 0) {
+                currentMwMatches.forEach((m, idx) => {
+                    let isLFC = m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool');
+                    let score = (m.homeScore !== null && m.homeScore !== undefined) ? `${m.homeScore}:${m.awayScore}` : `(${m.time || '15:00'} Uhr)`;
+                    let matchText = `${m.home} ${score} ${m.away}`;
+
+                    let span = document.createElement('span');
+                    if (isLFC) {
+                        span.className = "ticker-lfc-match";
+                    } else {
+                        span.style.margin = "0 12px";
+                    }
+                    span.innerText = matchText;
+                    tickerContainer.appendChild(span);
+
+                    if (idx < currentMwMatches.length - 1) {
+                        let sep = document.createElement('span');
+                        sep.innerText = "⚽";
+                        sep.style.color = "var(--lfc-gold)";
+                        sep.style.margin = "0 8px";
+                        tickerContainer.appendChild(sep);
+                    }
+                });
+            } else {
+                tickerContainer.innerText = "FC Liverpool — Premier League Saison 2026/27 — Willkommen!";
+            }
+        }
+    }
+
     function getTeamHtml(teamName, logoUrl, alignRight = false, goals = []) {
-        let logoHtml = logoUrl ? '<img src="' + logoUrl + '" alt="' + teamName + '" class="team-mini-logo">' : '';
+        let logo = logoUrl || teamLogos[teamName.trim().toLowerCase()] || "";
+        let logoHtml = logo ? '<img src="' + logo + '" alt="' + teamName + '" class="team-mini-logo">' : '';
         let goalsHtml = '';
         if (goals && goals.length > 0) {
             let alignmentStyle = alignRight ? 'text-align: right;' : 'text-align: left;';
@@ -1104,7 +1226,9 @@
             const response = await fetch(url);
             const data = await response.json();
             const entries = data.children?.[0]?.standings?.entries || data.standings?.entries || [];
+            cachedStandingsEntries = entries;
             renderTable(entries, tbody);
+            updateFormKingWidget();
         } catch (error) {
             console.error("Fehler beim Abrufen der Tabelle:", error);
             tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #f85149; padding: 30px;">Fehler beim Laden der Tabelle.</td></tr>';
@@ -1120,6 +1244,9 @@
 
         entries.forEach((entry, idx) => {
             const team = entry.team;
+            if (team?.logos?.[0]?.href) {
+                teamLogos[team.displayName.trim().toLowerCase()] = team.logos[0].href;
+            }
             const stats = entry.stats || [];
             const getStat = (name) => stats.find(s => s.name === name)?.displayValue || "0";
 
@@ -1199,6 +1326,9 @@
                 if (!homeComp || !awayComp) return;
                 const statusType = ev.status.type.state;
 
+                if (homeComp.team.logo) teamLogos[homeComp.team.displayName.trim().toLowerCase()] = homeComp.team.logo;
+                if (awayComp.team.logo) teamLogos[awayComp.team.displayName.trim().toLowerCase()] = awayComp.team.logo;
+
                 let goalsHome = [];
                 let goalsAway = [];
                 let runningHome = 0;
@@ -1265,11 +1395,13 @@
         let pastMatches = allLFCMatches.filter(m => m.homeScore !== null && m.homeScore !== undefined);
         let lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
 
-        let nextWidget = document.getElementById('nextMatchWidget');
-        if (nextMatch) {
-            nextWidget.innerHTML = `<strong>ST ${nextMatch.matchday}</strong> — ${nextMatch.date || ''} ${nextMatch.time || ''}<br><div style="margin-top:4px; font-weight:bold;">${nextMatch.home} vs ${nextMatch.away}</div>`;
+        // Timer Setup
+        if (nextMatch && nextMatch.dateTime) {
+            nextMatchDateTime = new Date(nextMatch.dateTime);
+            startCountdownTimer();
         } else {
-            nextWidget.innerHTML = "Kein anstehendes Spiel gefunden.";
+            nextMatchDateTime = null;
+            if (countdownTimerInterval) clearInterval(countdownTimerInterval);
         }
 
         let lastWidget = document.getElementById('lastMatchWidget');
@@ -1280,8 +1412,6 @@
         }
 
         let played = 0, won = 0, draw = 0, lost = 0, goalsFor = 0, goalsAgainst = 0, points = 0;
-        let homePlayed = 0, homeWon = 0, homeDraw = 0, homeLost = 0, homePts = 0;
-        let awayPlayed = 0, awayWon = 0, awayDraw = 0, awayLost = 0, awayPts = 0;
         let formBadgesHtml = '';
         let lfcScorersMap = {};
 
@@ -1291,18 +1421,6 @@
             let oppG = isHome ? m.awayScore : m.homeScore;
             played++;
             goalsFor += myG; goalsAgainst += oppG;
-
-            if (isHome) {
-                homePlayed++;
-                if (myG > oppG) { homeWon++; homePts += 3; }
-                else if (myG === oppG) { homeDraw++; homePts += 1; }
-                else { homeLost++; }
-            } else {
-                awayPlayed++;
-                if (myG > oppG) { awayWon++; awayPts += 3; }
-                else if (myG === oppG) { awayDraw++; awayPts += 1; }
-                else { awayLost++; }
-            }
 
             if (myG > oppG) {
                 won++; points += 3;
@@ -1319,7 +1437,9 @@
                 if (teamName.toLowerCase().includes('liverpool') && Array.isArray(gList)) {
                     gList.forEach(gStr => {
                         let cleanName = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').split('(')[0].trim();
-                        if (cleanName) lfcScorersMap[cleanName] = (lfcScorersMap[cleanName] || 0) + 1;
+                        if (cleanName && cleanName.toLowerCase() !== 'tor' && cleanName.toLowerCase() !== 'goal' && !cleanName.toLowerCase().includes('liverpool')) {
+                            lfcScorersMap[cleanName] = (lfcScorersMap[cleanName] || 0) + 1;
+                        }
                     });
                 }
             };
@@ -1334,11 +1454,6 @@
             <div class="stat-card"><div class="stat-label">Niederlagen</div><div class="stat-value" style="color: #f85149;">${lost}</div></div>
             <div class="stat-card"><div class="stat-label">Tore</div><div class="stat-value">${goalsFor}:${goalsAgainst}</div></div>
             <div class="stat-card"><div class="stat-label">Punkte</div><div class="stat-value">${points}</div></div>
-        `;
-
-        document.getElementById('homeAwayWidget').innerHTML = `
-            Heim: ${homeWon}S - ${homeDraw}U - ${homeLost}N (${homePts} Pkt)<br>
-            Auswärts: ${awayWon}S - ${awayDraw}U - ${awayLost}N (${awayPts} Pkt)
         `;
 
         let sortedScorers = Object.keys(lfcScorersMap).map(name => ({ name: name, goals: lfcScorersMap[name] }));
@@ -1364,11 +1479,157 @@
         } else {
             formWidget.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Noch keine beendeten Spiele</span>';
         }
+
+        updateFormKingWidget();
+    }
+
+    function updateFormKingWidget() {
+        let allTeamsStats = {};
+        let allTeamsList = [];
+
+        Object.values(leagueMatches).forEach(matchList => {
+            if (Array.isArray(matchList)) {
+                matchList.forEach(m => {
+                    if (!allTeamsList.includes(m.home)) allTeamsList.push(m.home);
+                    if (!allTeamsList.includes(m.away)) allTeamsList.push(m.away);
+                });
+            }
+        });
+
+        allTeamsList.forEach(t => { allTeamsStats[t] = { name: t, matches: [] }; });
+
+        Object.values(leagueMatches).forEach(matchList => {
+            if (!Array.isArray(matchList)) return;
+            matchList.forEach(m => {
+                if (m.homeScore === null || m.homeScore === undefined || m.awayScore === null || m.awayScore === undefined) return;
+                let h = m.home, a = m.away;
+                if (!allTeamsStats[h] || !allTeamsStats[a]) return;
+
+                let hG = m.homeScore, aG = m.awayScore;
+                
+                let hRes = hG > aG ? 'S' : (hG === aG ? 'U' : 'N');
+                let hPts = hG > aG ? 3 : (hG === aG ? 1 : 0);
+                allTeamsStats[h].matches.push({ date: m.dateTime || m.date, pts: hPts, gf: hG, ga: aG, res: hRes });
+
+                let aRes = aG > hG ? 'S' : (aG === hG ? 'U' : 'N');
+                let aPts = aG > hG ? 3 : (aG === hG ? 1 : 0);
+                allTeamsStats[a].matches.push({ date: m.dateTime || m.date, pts: aPts, gf: aG, ga: hG, res: aRes });
+            });
+        });
+
+        let bestTeam = null;
+        let maxPtsL5 = -1;
+        let bestToreL5 = "0:0";
+        let bestSerieStr = "";
+
+        Object.values(allTeamsStats).forEach(team => {
+            team.matches.sort((x, y) => new Date(y.date || 0) - new Date(x.date || 0));
+            let last5 = team.matches.slice(0, 5);
+            if (last5.length === 0) return;
+
+            let ptsSum = last5.reduce((acc, cur) => acc + cur.pts, 0);
+            let gfSum = last5.reduce((acc, cur) => acc + cur.gf, 0);
+            let gaSum = last5.reduce((acc, cur) => acc + cur.ga, 0);
+            let toreStr = `${gfSum}:${gaSum}`;
+            let serieStr = last5.slice().reverse().map(c => c.res).join('');
+
+            if (ptsSum > maxPtsL5) {
+                maxPtsL5 = ptsSum;
+                bestTeam = team.name;
+                bestToreL5 = toreStr;
+                bestSerieStr = serieStr;
+            }
+        });
+
+        let formKingWidget = document.getElementById('formKingWidget');
+        if (bestTeam) {
+            let logoUrl = teamLogos[bestTeam.trim().toLowerCase()] || "";
+            let logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${bestTeam}" style="width: 22px; height: 22px; object-fit: contain; vertical-align: middle; margin-right: 6px;">` : '';
+            
+            let coloredSerie = bestSerieStr.split('').map(char => {
+                let color = char === 'S' ? '#3fb950' : (char === 'U' ? '#e3b341' : '#f85149');
+                return `<span style="color: ${color}; font-weight: bold; margin-right: 3px;">${char}</span>`;
+            }).join('');
+
+            formKingWidget.innerHTML = `
+                <div style="display: flex; align-items: center; font-weight: bold; font-size: 0.95rem; color: #ffffff; margin-bottom: 8px;">
+                    ${logoHtml}<span>${bestTeam}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                    <span style="color: var(--text-muted);">Punkte (L5):</span>
+                    <strong style="color: #3fb950;">${maxPtsL5} Pkt</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                    <span style="color: var(--text-muted);">Tore (L5):</span>
+                    <strong style="color: var(--lfc-gold);">${bestToreL5}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; align-items: center;">
+                    <span style="color: var(--text-muted);">Serie:</span>
+                    <div>${coloredSerie}</div>
+                </div>
+            `;
+        } else {
+            formKingWidget.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Noch keine Spieldaten verfügbar</span>';
+        }
+    }
+
+    function startCountdownTimer() {
+        if (countdownTimerInterval) clearInterval(countdownTimerInterval);
+
+        function updateCountdown() {
+            if (!nextMatchDateTime) return;
+            let now = new Date();
+            let diff = nextMatchDateTime - now;
+
+            let nextWidget = document.getElementById('nextMatchWidget');
+            let allLFCMatches = [];
+            for (let mDay in leagueMatches) {
+                let matches = leagueMatches[mDay];
+                if (Array.isArray(matches)) {
+                    matches.forEach(m => {
+                        if (m.home && m.away && (m.home.toLowerCase().includes('liverpool') || m.away.toLowerCase().includes('liverpool'))) {
+                            allLFCMatches.push(Object.assign({ matchday: parseInt(mDay) }, m));
+                        }
+                    });
+                }
+            }
+            allLFCMatches.sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
+            let nextMatch = allLFCMatches.find(m => new Date(m.dateTime || 0) >= now && (m.homeScore === null || m.homeScore === undefined));
+
+            if (!nextMatch) {
+                nextWidget.innerHTML = "Kein anstehendes Spiel gefunden.";
+                if (countdownTimerInterval) clearInterval(countdownTimerInterval);
+                return;
+            }
+
+            if (diff <= 0) {
+                nextWidget.innerHTML = `<strong>ST ${nextMatch.matchday}</strong> — ${nextMatch.date || ''} ${nextMatch.time || ''}<br><div style="margin-top:4px; font-weight:bold;">${nextMatch.home} vs ${nextMatch.away}</div><div style="margin-top:6px; color:#f87171; font-weight:bold; font-size:0.8rem;">🔴 Spiel läuft oder startet gleich!</div>`;
+                return;
+            }
+
+            let days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            let hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            let minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            let seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            let countdownStr = `${days}T ${hours}h ${minutes}m ${seconds}s`;
+
+            nextWidget.innerHTML = `
+                <strong>ST ${nextMatch.matchday}</strong> — ${nextMatch.date || ''} ${nextMatch.time || ''} Uhr<br>
+                <div style="margin-top:4px; font-weight:bold;">${nextMatch.home} vs ${nextMatch.away}</div>
+                <div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); background:#17131a; padding:6px; border-radius:4px; text-align:center;">
+                    ⏱️ Anpfiff in: <strong style="color:var(--lfc-gold);">${countdownStr}</strong>
+                </div>
+            `;
+        }
+
+        updateCountdown();
+        countdownTimerInterval = setInterval(updateCountdown, 1000);
     }
 
     async function openScorersModal() {
         let tbody = document.getElementById('scorersModalBody');
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Lade alle Tore der Premier League...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Berechne Torschützen aus den Spielpaarungen...</td></tr>`;
         document.getElementById('scorersModal').style.display = 'flex';
 
         let fetchPromises = [];
@@ -1382,24 +1643,27 @@
         }
 
         let aggregatedScorers = {};
+
         for (let mw = 1; mw <= 38; mw++) {
             let matches = leagueMatches[mw] || [];
             matches.forEach(m => {
-                let collectGoals = (gList, teamName, logoUrl) => {
+                let processGoals = (gList, teamName, logoUrl) => {
                     if (Array.isArray(gList)) {
                         gList.forEach(gStr => {
-                            let cleanName = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').split('(')[0].trim();
-                            if (cleanName && cleanName.toLowerCase() !== 'tor') {
-                                if (!aggregatedScorers[cleanName]) {
-                                    aggregatedScorers[cleanName] = { count: 0, team: teamName, logo: logoUrl };
+                            let clean = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').trim();
+                            let playerName = clean.split('(')[0].trim();
+                            
+                            if (playerName && playerName.toLowerCase() !== 'tor' && playerName.toLowerCase() !== 'goal' && playerName !== teamName) {
+                                if (!aggregatedScorers[playerName]) {
+                                    aggregatedScorers[playerName] = { count: 0, team: teamName, logo: logoUrl };
                                 }
-                                aggregatedScorers[cleanName].count++;
+                                aggregatedScorers[playerName].count++;
                             }
                         });
                     }
                 };
-                collectGoals(m.goalsHome, m.home, m.homeLogo);
-                collectGoals(m.goalsAway, m.away, m.awayLogo);
+                processGoals(m.goalsHome, m.home, m.homeLogo);
+                processGoals(m.goalsAway, m.away, m.awayLogo);
             });
         }
 
@@ -1412,23 +1676,27 @@
 
         tbody.innerHTML = '';
         if (scorersArray.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in den bisherigen Spieltagen erfasst.</td></tr>`;
-        } else {
-            scorersArray.sort((a, b) => b.goals - a.goals);
-            scorersArray.forEach((s, idx) => {
-                let tr = document.createElement('tr');
-                let logoHtml = s.logo ? `<img src="${s.logo}" alt="${s.team}" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 6px;">` : '';
-                tr.innerHTML = `
-                    <td style="text-align: center; font-weight: bold; color: var(--lfc-gold);">${idx + 1}.</td>
-                    <td>
-                        <div style="font-weight: bold; color: #ffffff;">${s.name}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center;">${logoHtml}<span>${s.team}</span></div>
-                    </td>
-                    <td style="text-align: center; font-weight: bold; color: var(--lfc-gold); font-size: 1.1rem;">${s.goals}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Torschützen in den Spielpaarungen erfasst.</td></tr>`;
+            return;
         }
+
+        scorersArray.sort((a, b) => b.goals - a.goals);
+
+        scorersArray.forEach((s, idx) => {
+            let tr = document.createElement('tr');
+            let logoUrl = s.logo || teamLogos[s.team.trim().toLowerCase()] || "";
+            let logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${s.team}" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle; margin-right: 6px;">` : '';
+            
+            tr.innerHTML = `
+                <td style="text-align: center; font-weight: bold; color: var(--lfc-gold);">${idx + 1}.</td>
+                <td>
+                    <div style="font-weight: bold; color: #ffffff;">${s.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center;">${logoHtml}<span>${s.team}</span></div>
+                </td>
+                <td style="text-align: center; font-weight: bold; color: var(--lfc-gold); font-size: 1.1rem;">${s.goals}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
     function closeScorersModal() { document.getElementById('scorersModal').style.display = 'none'; }
