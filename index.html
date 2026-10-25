@@ -863,35 +863,34 @@
         }
     }
 
-    // Triggert für alle Live-Spiele und schickt Torschütze, Minute & Team mit
+    // Korrigierte Funktion: Schreibt das Tor sauber via upsert in sent_goals_liverpool und triggert den Push
     async function triggerLiveGoalPush(matchId, home, away, homeScore, awayScore, goalText) {
         try {
             let uniqueGoalId = `${matchId}_${homeScore}_${awayScore}`;
 
-            let { data: existing, error: checkError } = await supabaseClient
+            let { error: upsertError } = await supabaseClient
                 .from('sent_goals_liverpool')
-                .select('goal_id')
-                .eq('goal_id', uniqueGoalId)
-                .maybeSingle();
+                .upsert([
+                    { goal_id: uniqueGoalId, match_id: matchId, home_score: homeScore, away_score: awayScore }
+                ], { onConflict: 'goal_id' });
 
-            if (!existing && !checkError) {
-                let { error: insertError } = await supabaseClient
-                    .from('sent_goals_liverpool')
-                    .insert([{ goal_id: uniqueGoalId, match_id: matchId, home_score: homeScore, away_score: awayScore }]);
-
-                if (!insertError) {
-                    await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-                        method: 'POST',
-                        mode: 'cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            table: 'push_subscriptions_lfc',
-                            title: `🔴 Tor in der Premier League! (${homeScore}:${awayScore})`,
-                            body: `⚽ ${goalText} (${home} vs ${away})`
-                        })
-                    });
-                }
+            if (upsertError) {
+                console.error("Supabase Upsert Fehler:", upsertError.message);
+                return;
             }
+
+            // Push an alle Abonnenten senden
+            await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'push_subscriptions_lfc',
+                    title: `🔴 Premier League Tor! (${homeScore}:${awayScore})`,
+                    body: `⚽ ${goalText} (${home} vs ${away})`
+                })
+            });
+
         } catch (e) {
             console.error("Fehler beim automatischen Live-Push:", e);
         }
@@ -994,7 +993,6 @@
                 let runningHome = 0;
                 let runningAway = 0;
 
-                // Extrahiert präzise Torschützen, Spielminute und Team-Zuordnung
                 if (comp.details && Array.isArray(comp.details)) {
                     comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
                     
@@ -1172,8 +1170,7 @@
         if (goals && goals.length > 0) {
             let alignmentStyle = alignRight ? 'text-align: right;' : 'text-align: left;';
             let indentStyle = alignRight ? 'padding-right: 30px;' : 'padding-left: 30px;';
-            // Zeigt Torschütze, Spielminute und Team direkt unter dem Spielstand an
-            let cleanGoals = goals.map(g => g.split('—')[0].trim()); // Entfernt redundanten Teamnamen-Anhang in der Zeile, da er ohnehin links/rechts steht
+            let cleanGoals = goals.map(g => g.split('—')[0].trim());
             goalsHtml = `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; ${alignmentStyle} ${indentStyle}">${cleanGoals.join('<br>')}</div>`;
         }
 
