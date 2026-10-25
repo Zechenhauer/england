@@ -505,7 +505,7 @@
     <div class="subtitle">Premier League — Saison 2026/27 (Live-Sync via ESPN)</div>
     <div class="meta-info">
         <span>⚡ Web-App & Management: Jürgen Schützendorf</span>
-        <span class="supabase-badge" id="cloudStatusBadge">● ESPN Live-Ticker Aktiv</span>
+        <span class="supabase-badge" id="cloudStatusBadge">● ESPN Live-Ticker & Torschützen Aktiv</span>
     </div>
 
     <!-- TICKER-LAUFBAND OBEN -->
@@ -516,7 +516,7 @@
         </div>
         <div style="overflow: hidden; width: 100%;">
             <div id="tickerContent" class="ticker-text">
-                Lade Spielstände und Ergebnisse...
+                Lade Spielstände und Torschützen...
             </div>
         </div>
     </div>
@@ -837,7 +837,7 @@
                 auth: auth
             }, { onConflict: 'endpoint' });
 
-            alert("Push-Alarm für den FC Liverpool erfolgreich aktiviert!");
+            alert("Push-Alarm für alle Premier League Tore erfolgreich aktiviert!");
         } catch (error) {
             console.error('Fehler bei der Push-Registrierung:', error);
             alert("Fehler beim Aktivieren der Benachrichtigung: " + error.message);
@@ -852,17 +852,18 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     table: 'push_subscriptions_lfc',
-                    title: "🔴 LFC Tor-Alarm! (1:0)",
-                    body: "⚽ Mohamed Salah (24') hat zum 1:0 für FC Liverpool getroffen!"
+                    title: "🔴 PL Tor-Alarm Test (1:0)",
+                    body: "⚽ Mohamed Salah (24') hat getroffen!"
                 })
             });
-            if (response.ok) alert("Test-Push für Liverpool erfolgreich ausgelöst!");
+            if (response.ok) alert("Test-Push erfolgreich ausgelöst!");
             else alert("Fehler von der Edge Function.");
         } catch (e) {
             alert("Netzwerkfehler: " + e.message);
         }
     }
 
+    // Triggert für alle Live-Spiele und schickt Torschütze, Minute & Team mit
     async function triggerLiveGoalPush(matchId, home, away, homeScore, awayScore, goalText) {
         try {
             let uniqueGoalId = `${matchId}_${homeScore}_${awayScore}`;
@@ -885,7 +886,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             table: 'push_subscriptions_lfc',
-                            title: `🔴 LFC Tor-Alarm! (${homeScore}:${awayScore})`,
+                            title: `🔴 Tor in der Premier League! (${homeScore}:${awayScore})`,
                             body: `⚽ ${goalText} (${home} vs ${away})`
                         })
                     });
@@ -993,6 +994,7 @@
                 let runningHome = 0;
                 let runningAway = 0;
 
+                // Extrahiert präzise Torschützen, Spielminute und Team-Zuordnung
                 if (comp.details && Array.isArray(comp.details)) {
                     comp.details.sort((a, b) => (parseInt(a.clock?.secs || 0) - parseInt(b.clock?.secs || 0)));
                     
@@ -1018,6 +1020,7 @@
                         const scoringTeamId = detail.team?.id;
                         const isHomeTeam = (scoringTeamId === homeComp.team.id);
                         const isAwayTeam = (scoringTeamId === awayComp.team.id);
+                        const scoringTeamName = isHomeTeam ? homeComp.team.displayName : (isAwayTeam ? awayComp.team.displayName : "Team");
 
                         let clock = detail.clock?.displayValue || "";
                         if (clock && !clock.endsWith("'")) clock += "'";
@@ -1026,16 +1029,17 @@
                             if (isHomeTeam) runningHome++;
                             if (isAwayTeam) runningAway++;
 
-                            if (!playerName) playerName = isHomeTeam ? homeComp.team.displayName : awayComp.team.displayName;
+                            if (!playerName) playerName = scoringTeamName;
 
                             let notes = "";
-                            if (detail.penalty) notes = " (Pen)";
-                            if (detail.ownGoal) notes = " (ET)";
+                            if (detail.penalty) notes = " (Elfmeter)";
+                            if (detail.ownGoal) notes = " (Eigentor)";
 
                             matchEvents.push({
                                 type: 'goal',
                                 teamId: scoringTeamId,
-                                text: `[${runningHome}:${runningAway}] ⚽ ${playerName} (${clock})${notes}`
+                                teamName: scoringTeamName,
+                                text: `[${runningHome}:${runningAway}] ⚽ ${playerName} (${clock})${notes} — ${scoringTeamName}`
                             });
                         } else if (isYellowRed || isYellow || isRed) {
                             if (!playerName) playerName = "Spieler";
@@ -1043,6 +1047,7 @@
                             matchEvents.push({
                                 type: 'card',
                                 teamId: scoringTeamId,
+                                teamName: scoringTeamName,
                                 text: `${icon} ${playerName} (${clock})`
                             });
                         }
@@ -1052,8 +1057,7 @@
                 let homeScoreVal = homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null;
                 let awayScoreVal = awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null;
 
-                let isLFCMatch = homeComp.team.displayName.toLowerCase().includes('liverpool') || awayComp.team.displayName.toLowerCase().includes('liverpool');
-                if (isLive && isLFCMatch && homeScoreVal !== null && awayScoreVal !== null) {
+                if (isLive && homeScoreVal !== null && awayScoreVal !== null) {
                     let matchKey = ev.id;
                     let lastState = liveScoresCache[matchKey];
                     if (lastState) {
@@ -1125,7 +1129,7 @@
                 });
             }
             if (tickerContainer.children.length === 0) {
-                tickerContainer.innerText = "FC Liverpool im Live-Modus";
+                tickerContainer.innerText = "Premier League im Live-Modus";
             }
         } else {
             statusIcon.className = "inline-block w-2 h-2 rounded-full bg-[var(--lfc-gold)]";
@@ -1168,7 +1172,9 @@
         if (goals && goals.length > 0) {
             let alignmentStyle = alignRight ? 'text-align: right;' : 'text-align: left;';
             let indentStyle = alignRight ? 'padding-right: 30px;' : 'padding-left: 30px;';
-            goalsHtml = `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; ${alignmentStyle} ${indentStyle}">${goals.join('<br>')}</div>`;
+            // Zeigt Torschütze, Spielminute und Team direkt unter dem Spielstand an
+            let cleanGoals = goals.map(g => g.split('—')[0].trim()); // Entfernt redundanten Teamnamen-Anhang in der Zeile, da er ohnehin links/rechts steht
+            goalsHtml = `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; ${alignmentStyle} ${indentStyle}">${cleanGoals.join('<br>')}</div>`;
         }
 
         if (alignRight) {
@@ -1344,16 +1350,20 @@
                         if (isGoal) {
                             let playerName = detail.scorer?.athlete?.displayName || detail.athlete?.displayName || "";
                             if (!playerName && detail.text) playerName = detail.text.replace(/scored.*\$/, '').trim();
+                            
                             const scoringTeamId = detail.team?.id;
                             const isHomeGoal = (scoringTeamId === homeComp.team.id);
                             const isAwayGoal = (scoringTeamId === awayComp.team.id);
+                            const scoringTeamName = isHomeGoal ? homeComp.team.displayName : (isAwayGoal ? awayComp.team.displayName : "Team");
+
                             if (isHomeGoal) runningHome++;
                             if (isAwayGoal) runningAway++;
-                            if (!playerName) playerName = isHomeGoal ? homeComp.team.displayName : awayComp.team.displayName;
+                            if (!playerName) playerName = scoringTeamName;
+
                             let clock = detail.clock?.displayValue || "";
                             if (clock && !clock.endsWith("'")) clock += "'";
                             
-                            let goalText = `[${runningHome}:${runningAway}] ⚽ ${playerName} (${clock})`;
+                            let goalText = `[${runningHome}:${runningAway}] ⚽ ${playerName} (${clock}) — ${scoringTeamName}`;
                             if (isHomeGoal) goalsHome.push(goalText);
                             if (isAwayGoal) goalsAway.push(goalText);
                         }
@@ -1397,7 +1407,6 @@
         let pastMatches = allLFCMatches.filter(m => m.homeScore !== null && m.homeScore !== undefined);
         let lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
 
-        // Timer Setup
         if (nextMatch && nextMatch.dateTime) {
             nextMatchDateTime = new Date(nextMatch.dateTime);
             startCountdownTimer();
@@ -1652,7 +1661,7 @@
                 let processGoals = (gList, teamName, logoUrl) => {
                     if (Array.isArray(gList)) {
                         gList.forEach(gStr => {
-                            let clean = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').trim();
+                            let clean = gStr.replace(/\[\d+:\d+\]/, '').replace('⚽', '').split('—')[0].trim();
                             let playerName = clean.split('(')[0].trim();
                             
                             if (playerName && playerName.toLowerCase() !== 'tor' && playerName.toLowerCase() !== 'goal' && playerName !== teamName) {
