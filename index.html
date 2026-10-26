@@ -863,7 +863,7 @@
         }
     }
 
-    // --- OPTIMIERTE LIVE-TOR-PUSH-LOGIK OHNE URL-ENCODING-PROBLEME ---
+    // --- AKTUALISIERTE LIVE-TOR-PUSH-LOGIK (FÄNGT AUCH BEENDETE SPIELE AB) ---
     async function triggerLiveGoalPush(matchId, home, away, homeScore, awayScore, goalText) {
         try {
             const uniqueGoalId = `${matchId}_${homeScore}:${awayScore}_${goalText}`;
@@ -972,9 +972,6 @@
             leagueMatches[currentMatchday] = [];
             let hasLive = false;
 
-            let liveScoresCache = JSON.parse(localStorage.getItem('lfc_live_scores_cache') || '{}');
-            let newScoresCache = {};
-
             events.forEach(ev => {
                 const comp = ev.competitions?.[0];
                 if (!comp) return;
@@ -1064,15 +1061,10 @@
                 let homeScoreVal = homeComp.score !== undefined && statusType !== 'pre' ? parseInt(homeComp.score) : null;
                 let awayScoreVal = awayComp.score !== undefined && statusType !== 'pre' ? parseInt(awayComp.score) : null;
 
-                if (isLive && homeScoreVal !== null && awayScoreVal !== null) {
-                    let matchKey = ev.id;
-                    let lastState = liveScoresCache[matchKey];
-                    if (lastState) {
-                        if (homeScoreVal > lastState.home || awayScoreVal > lastState.away) {
-                            triggerLiveGoalPush(ev.id, homeComp.team.displayName, awayComp.team.displayName, homeScoreVal, awayScoreVal, latestScorerText || "Tor!");
-                        }
-                    }
-                    newScoresCache[matchKey] = { home: homeScoreVal, away: awayScoreVal };
+                // --- ERWEITERTER CHECK: Greift bei Live ODER frisch beendeten Spielen ---
+                if ((isLive || statusType === 'post') && homeScoreVal !== null && awayScoreVal !== null && (homeScoreVal > 0 || awayScoreVal > 0)) {
+                    let matchKey = `eng_${ev.id}`;
+                    triggerLiveGoalPush(matchKey, homeComp.team.displayName, awayComp.team.displayName, homeScoreVal, awayScoreVal, latestScorerText || "Tor!");
                 }
 
                 let goalsHomeList = matchEvents.filter(e => e.teamId === homeComp.team.id).map(e => e.text);
@@ -1095,9 +1087,7 @@
                 });
             });
 
-            localStorage.setItem('lfc_live_scores_cache', JSON.stringify(newScoresCache));
             leagueMatches[currentMatchday].sort((a, b) => new Date(a.dateTime || 0) - new Date(b.dateTime || 0));
-
             updateTopTicker(hasLive);
 
         } catch (e) {
